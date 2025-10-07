@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -9,7 +12,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -18,30 +23,61 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Hàm xử lý đăng nhập
+  // Xử lý đăng nhập với email
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // Giả lập thời gian xử lý đăng nhập
-      await Future.delayed(Duration(seconds: 1));
+      final result = await _authService.loginWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
       setState(() {
         _isLoading = false;
       });
 
-      // Hiển thị Snackbar thông báo thành công
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Color(0xFF10b981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Color(0xFFef4444),
+          ),
+        );
+      }
+    }
+  }
+
+  // Xử lý đăng nhập với Google
+  void _handleGoogleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await _authService.loginWithGoogle();
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đăng nhập thành công!'),
-          backgroundColor: Color(0xFF06b6d4),
-          duration: Duration(seconds: 2),
+          content: Text(result['message']),
+          backgroundColor: Color(0xFF10b981),
         ),
       );
-
-      // Chuyển sang màn hình chính
       Navigator.pushReplacementNamed(context, '/main');
     }
   }
@@ -49,12 +85,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F4F9), // Màu nền hồng nhạt như trong hình
+      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
         title: Text(
           'Đăng nhập',
           style: TextStyle(
-            color: Color(0xFF1e293b),
+            color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -63,46 +99,71 @@ class _LoginScreenState extends State<LoginScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo hoặc tiêu đề ứng dụng
+                SizedBox(height: 40),
+                
                 Container(
                   margin: EdgeInsets.only(bottom: 48),
-                  child: Text(
-                    'Truyện Tranh Xã Hội',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF06b6d4),
-                    ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.menu_book_rounded,
+                        size: 64,
+                        color: Color(0xFF06b6d4),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Lory',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Cộng đồng đọc truyện',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
                 // Trường nhập Email
                 Container(
-                  margin: EdgeInsets.only(bottom: 20),
+                  margin: EdgeInsets.only(bottom: 16),
                   child: TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Email',
+                      labelStyle: TextStyle(color: Colors.white70),
                       hintText: 'Vui lòng nhập Email',
+                      hintStyle: TextStyle(color: Colors.white38),
                       prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF06b6d4)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Color(0xFFec4899)),
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.white24),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Color(0xFF06b6d4), width: 2),
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Color(0xFF1e293b),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -118,24 +179,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Trường nhập Mật khẩu
                 Container(
-                  margin: EdgeInsets.only(bottom: 32),
+                  margin: EdgeInsets.only(bottom: 8),
                   child: TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
+                    style: TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Mật khẩu',
+                      labelStyle: TextStyle(color: Colors.white70),
                       hintText: 'Vui lòng nhập Mật khẩu',
+                      hintStyle: TextStyle(color: Colors.white38),
                       prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF06b6d4)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white54,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Color(0xFFec4899)),
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.white24),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Color(0xFF06b6d4), width: 2),
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Color(0xFF1e293b),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -149,6 +228,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                      );
+                    },
+                    child: Text(
+                      'Quên mật khẩu?',
+                      style: TextStyle(
+                        color: Color(0xFF06b6d4),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
                 // Nút Đăng nhập
                 Container(
                   width: double.infinity,
@@ -156,12 +256,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFec4899),
+                      backgroundColor: Color(0xFF06b6d4),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 2,
+                      elevation: 0,
                     ),
                     child: _isLoading
                         ? CircularProgressIndicator(
@@ -177,27 +277,68 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Liên kết đăng ký (tùy chọn)
+                SizedBox(height: 24),
+
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.white24)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Hoặc',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.white24)),
+                  ],
+                ),
+
+                SizedBox(height: 24),
+
                 Container(
-                  margin: EdgeInsets.only(top: 24),
-                  child: TextButton(
-                    onPressed: () {
-                      // Có thể thêm màn hình đăng ký sau
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Tính năng đăng ký sẽ được cập nhật sau!'),
-                          backgroundColor: Color(0xFF06b6d4),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Chưa có tài khoản? Đăng ký ngay',
-                      style: TextStyle(
-                        color: Color(0xFF06b6d4),
-                        fontWeight: FontWeight.w500,
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _handleGoogleLogin,
+                    icon: Icon(Icons.g_mobiledata, size: 28),
+                    label: Text('Đăng nhập với Google'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
+                ),
+
+                SizedBox(height: 32),
+
+                // Link đăng ký
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Chưa có tài khoản? ',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => RegisterScreen()),
+                        );
+                      },
+                      child: Text(
+                        'Đăng ký ngay',
+                        style: TextStyle(
+                          color: Color(0xFF06b6d4),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

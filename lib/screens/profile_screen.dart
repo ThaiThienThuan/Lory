@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../data/mock_data.dart';
+import 'admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -8,22 +9,41 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final User currentUser = MockData.users[0]; // Mock current user
+  final User currentUser = MockData.users[0];
+  final bool isAdmin = true; // Trong thực tế, lấy từ auth service
+  int currentExp = 2450;
+  int maxExp = 5000;
+  String userLevel = 'Bạc'; // Đồng, Bạc, Vàng, Kim Cương
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
+        backgroundColor: Color(0xFF1e293b),
         title: Text(
-          'Profile',
+          'Hồ Sơ',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1e293b),
+            color: Colors.white,
           ),
         ),
         actions: [
+          if (isAdmin)
+            IconButton(
+              icon: Icon(Icons.admin_panel_settings, color: Colors.cyan),
+              tooltip: 'Admin Panel',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AdminDashboardScreen(),
+                  ),
+                );
+              },
+            ),
           IconButton(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.settings, color: Colors.white),
             onPressed: () {
               _showSettingsBottomSheet(context);
             },
@@ -33,14 +53,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header
             Container(
               padding: EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(0xFF06b6d4).withOpacity(0.1),
-                    Color(0xFFec4899).withOpacity(0.1),
+                    Color(0xFF06b6d4).withOpacity(0.2),
+                    Color(0xFFec4899).withOpacity(0.2),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -78,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 8),
@@ -86,17 +105,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     currentUser.bio,
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey[600],
+                      color: Colors.white70,
                     ),
                     textAlign: TextAlign.center,
                   ),
+
+                  SizedBox(height: 20),
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1e293b),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.workspace_premium,
+                                  color: _getLevelColor(userLevel),
+                                  size: 24,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Hạng $userLevel',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '$currentExp / $maxExp EXP',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: currentExp / maxExp,
+                            minHeight: 10,
+                            backgroundColor: Color(0xFF0f172a),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _getLevelColor(userLevel),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Đọc truyện để tăng EXP và nâng cấp hạng!',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatItem('Followers', currentUser.followers.toString()),
-                      _buildStatItem('Following', currentUser.following.toString()),
-                      _buildStatItem('Posts', '24'), // Mock data
+                      _buildStatItem('Người theo dõi', currentUser.followers.toString()),
+                      _buildStatItem('Đang theo dõi', currentUser.following.toString()),
+                      _buildStatItem('Bài đăng', '24'),
                     ],
                   ),
                   SizedBox(height: 20),
@@ -112,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text('Edit Profile'),
+                    child: Text('Chỉnh Sửa Hồ Sơ'),
                   ),
                 ],
               ),
@@ -120,18 +203,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             SizedBox(height: 24),
 
-            // Favorite Genres
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Favorite Genres',
+                    'Thể Loại Yêu Thích',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 12),
@@ -142,8 +224,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return Container(
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Color(0xFFec4899).withOpacity(0.1),
+                          color: Color(0xFFec4899).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xFFec4899)),
                         ),
                         child: Text(
                           genre,
@@ -161,18 +244,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             SizedBox(height: 24),
 
-            // Quick Actions
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Quick Actions',
+                    'Truy Cập Nhanh',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 12),
@@ -186,29 +268,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       _buildQuickActionCard(
                         icon: Icons.download,
-                        title: 'Downloads',
-                        subtitle: '12 manga',
+                        title: 'Tải xuống',
+                        subtitle: '12 truyện',
                         color: Color(0xFF06b6d4),
                         onTap: () {},
                       ),
                       _buildQuickActionCard(
                         icon: Icons.history,
-                        title: 'Reading History',
-                        subtitle: '45 chapters',
+                        title: 'Lịch sử đọc',
+                        subtitle: '45 chương',
                         color: Color(0xFFec4899),
                         onTap: () {},
                       ),
                       _buildQuickActionCard(
                         icon: Icons.bookmark,
-                        title: 'Bookmarks',
-                        subtitle: '8 saved',
+                        title: 'Đánh dấu',
+                        subtitle: '8 đã lưu',
                         color: Color(0xFFfbbf24),
                         onTap: () {},
                       ),
                       _buildQuickActionCard(
                         icon: Icons.group,
-                        title: 'Communities',
-                        subtitle: '3 joined',
+                        title: 'Cộng đồng',
+                        subtitle: '3 đã tham gia',
                         color: Color(0xFF10b981),
                         onTap: () {},
                       ),
@@ -220,25 +302,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             SizedBox(height: 24),
 
-            // Recent Activity
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Recent Activity',
+                    'Hoạt Động Gần Đây',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 12),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
-                    itemCount: 3, // Mock recent activities
+                    itemCount: 3,
                     itemBuilder: (context, index) {
                       return _buildActivityItem(index);
                     },
@@ -262,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1e293b),
+            color: Colors.white,
           ),
         ),
         SizedBox(height: 4),
@@ -270,7 +351,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[600],
+            color: Colors.white70,
           ),
         ),
       ],
@@ -289,22 +370,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFF1e293b),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -320,12 +394,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: Colors.white,
                     ),
                   ),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Colors.white54,
                       fontSize: 12,
                     ),
                   ),
@@ -340,9 +415,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildActivityItem(int index) {
     final activities = [
-      {'action': 'Started reading', 'manga': 'Dragon\'s Legacy', 'time': '2 hours ago'},
-      {'action': 'Liked post by', 'manga': 'Sakura Yamamoto', 'time': '1 day ago'},
-      {'action': 'Added to favorites', 'manga': 'Cyber Ninja Chronicles', 'time': '3 days ago'},
+      {'action': 'Bắt đầu đọc', 'manga': 'Di Sản Rồng Thiêng', 'time': '2 giờ trước'},
+      {'action': 'Thích bài đăng của', 'manga': 'Sakura Yamamoto', 'time': '1 ngày trước'},
+      {'action': 'Thêm vào yêu thích', 'manga': 'Biên Niên Sử Ninja Mạng', 'time': '3 ngày trước'},
     ];
 
     final activity = activities[index];
@@ -351,16 +426,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFF1e293b),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Row(
         children: [
           Container(
             padding: EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Color(0xFF06b6d4).withOpacity(0.1),
+              color: Color(0xFF06b6d4).withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -376,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: TextStyle(color: Colors.black, fontSize: 14),
+                    style: TextStyle(color: Colors.white, fontSize: 14),
                     children: [
                       TextSpan(text: activity['action']),
                       TextSpan(
@@ -390,7 +464,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   activity['time']!,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: Colors.white54,
                     fontSize: 12,
                   ),
                 ),
@@ -410,28 +484,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Edit Profile'),
+          backgroundColor: Color(0xFF1e293b),
+          title: Text('Chỉnh Sửa Hồ Sơ', style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
+                style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'Tên',
+                  labelStyle: TextStyle(color: Colors.white70),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  filled: true,
+                  fillColor: Color(0xFF0f172a),
                 ),
               ),
               SizedBox(height: 16),
               TextField(
                 controller: bioController,
                 maxLines: 3,
+                style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Bio',
+                  labelText: 'Tiểu sử',
+                  labelStyle: TextStyle(color: Colors.white70),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  filled: true,
+                  fillColor: Color(0xFF0f172a),
                 ),
               ),
             ],
@@ -439,20 +522,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: Text('Hủy', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Profile updated!')),
+                  SnackBar(content: Text('Đã cập nhật hồ sơ!')),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF06b6d4),
                 foregroundColor: Colors.white,
               ),
-              child: Text('Save'),
+              child: Text('Lưu'),
             ),
           ],
         );
@@ -463,6 +546,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Color(0xFF1e293b),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -473,36 +557,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Settings',
+                'Cài Đặt',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
               SizedBox(height: 16),
               ListTile(
-                leading: Icon(Icons.notifications),
-                title: Text('Notifications'),
+                leading: Icon(Icons.notifications, color: Colors.white),
+                title: Text('Thông báo', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.privacy_tip),
-                title: Text('Privacy'),
+                leading: Icon(Icons.privacy_tip, color: Colors.white),
+                title: Text('Quyền riêng tư', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.help),
-                title: Text('Help & Support'),
+                leading: Icon(Icons.help, color: Colors.white),
+                title: Text('Trợ giúp & Hỗ trợ', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.info),
-                title: Text('About'),
+                leading: Icon(Icons.info, color: Colors.white),
+                title: Text('Về ứng dụng', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
                 leading: Icon(Icons.logout, color: Colors.red),
-                title: Text('Logout', style: TextStyle(color: Colors.red)),
+                title: Text('Đăng xuất', style: TextStyle(color: Colors.red)),
                 onTap: () => Navigator.pop(context),
               ),
             ],
@@ -510,5 +595,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  Color _getLevelColor(String level) {
+    switch (level) {
+      case 'Đồng':
+        return Color(0xFFcd7f32);
+      case 'Bạc':
+        return Color(0xFFC0C0C0);
+      case 'Vàng':
+        return Color(0xFFFFD700);
+      case 'Kim Cương':
+        return Color(0xFF00CED1);
+      default:
+        return Colors.grey;
+    }
   }
 }

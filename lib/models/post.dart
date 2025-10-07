@@ -1,4 +1,6 @@
 import 'user.dart';
+import 'community.dart';
+
 class Post {
   final String id;
   final User user;
@@ -9,7 +11,8 @@ class Post {
   final int comments;
   final int shares;
   final bool isLiked;
-  final String? mangaReference; 
+  final String? mangaReference;
+  final Community? community; // Bài đăng từ cộng đồng/nhóm nào
 
   Post({
     required this.id,
@@ -22,5 +25,6 @@ class Post {
     required this.shares,
     this.isLiked = false,
     this.mangaReference,
+    this.community,
   });
 }

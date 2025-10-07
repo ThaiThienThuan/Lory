@@ -1,3 +1,4 @@
+import '../models/comment.dart';
 class Manga {
   final String id;
   final String title;
@@ -7,10 +8,12 @@ class Manga {
   final double rating;
   final int views;
   final String author;
-  final String status; // ongoing, completed, hiatus
+  final String status;
   final List<Chapter> chapters;
   final bool isFollowed;
   final bool isLiked;
+  final int totalRatings;
+  final List<Comment> comments;
 
   Manga({
     required this.id,
@@ -25,6 +28,8 @@ class Manga {
     required this.chapters,
     this.isFollowed = false,
     this.isLiked = false,
+    this.totalRatings = 0,
+    this.comments = const [],
   });
 }
 
@@ -35,6 +40,9 @@ class Chapter {
   final String releaseDate;
   final List<String> pages;
   final bool isRead;
+  final int likes;
+  final bool isLiked;
+  final List<Comment> comments;
 
   Chapter({
     required this.id,
@@ -43,5 +51,8 @@ class Chapter {
     required this.releaseDate,
     required this.pages,
     this.isRead = false,
+    this.likes = 0,
+    this.isLiked = false,
+    this.comments = const [],
   });
 }

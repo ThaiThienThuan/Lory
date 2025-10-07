@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/post.dart';
 import '../data/mock_data.dart';
+import 'user_profile_screen.dart';
+import 'messaging_screen.dart';
+import 'community_detail_screen.dart';
 
 class SocialScreen extends StatefulWidget {
   @override
@@ -13,28 +16,90 @@ class _SocialScreenState extends State<SocialScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
+        backgroundColor: Color(0xFF1e293b),
         title: Text(
-          'Community',
+          'Cộng Đồng',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1e293b),
+            color: Colors.white,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {},
+            icon: Icon(Icons.person_outline, color: Colors.cyan),
+            tooltip: 'Tường cá nhân',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfileScreen(user: MockData.users[0]),
+                ),
+              );
+            },
           ),
           IconButton(
-            icon: Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            icon: Icon(Icons.message_outlined, color: Colors.cyan),
+            tooltip: 'Tin nhắn',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MessagingScreen(),
+                ),
+              );
+            },
+          ),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: Colors.white),
+            color: Color(0xFF1e293b),
+            onSelected: (value) {
+              if (value == 'settings') {
+                // Điều hướng đến cài đặt
+              } else if (value == 'create_group') {
+                _showCreateGroupDialog(context);
+              } else if (value == 'my_groups') {
+                // Hiển thị danh sách nhóm của tôi
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'create_group',
+                child: Row(
+                  children: [
+                    Icon(Icons.group_add, color: Colors.cyan),
+                    SizedBox(width: 12),
+                    Text('Tạo nhóm/cộng đồng', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'my_groups',
+                child: Row(
+                  children: [
+                    Icon(Icons.groups, color: Colors.cyan),
+                    SizedBox(width: 12),
+                    Text('Nhóm của tôi', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, color: Colors.cyan),
+                    SizedBox(width: 12),
+                    Text('Cài đặt', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Simulate refresh
           await Future.delayed(Duration(seconds: 1));
           setState(() {
             posts = MockData.posts;
@@ -60,10 +125,10 @@ class _SocialScreenState extends State<SocialScreen> {
   }
 
   Widget _buildPostCard(Post post) {
-    return Card(
+    return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
+        color: Color(0xFF1e293b),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -71,65 +136,107 @@ class _SocialScreenState extends State<SocialScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User info header
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage(post.user.avatar),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.user.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        _formatTimeAgo(post.createdAt),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfileScreen(user: post.user),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.more_vert),
-                  onPressed: () {
-                    _showPostOptions(context, post);
-                  },
-                ),
-              ],
+                );
+              },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: NetworkImage(post.user.avatar),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.user.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (post.community != null)
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CommunityDetailScreen(
+                                    community: post.community!,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Text(
+                                  'từ: ',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  post.community!.name,
+                                  style: TextStyle(
+                                    color: Colors.cyan,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Text(
+                            _formatTimeAgo(post.createdAt),
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.more_vert, color: Colors.white),
+                    onPressed: () {
+                      _showPostOptions(context, post);
+                    },
+                  ),
+                ],
+              ),
             ),
 
             SizedBox(height: 12),
 
-            // Post content
             Text(
               post.content,
               style: TextStyle(
                 fontSize: 16,
                 height: 1.4,
+                color: Colors.white,
               ),
             ),
 
-            // Manga reference if exists
             if (post.mangaReference != null) ...[
               SizedBox(height: 12),
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Color(0xFF06b6d4).withOpacity(0.1),
+                  color: Color(0xFF06b6d4).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Color(0xFF06b6d4).withOpacity(0.3),
+                    color: Color(0xFF06b6d4),
                   ),
                 ),
                 child: Row(
@@ -141,7 +248,7 @@ class _SocialScreenState extends State<SocialScreen> {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Referenced: ${_getMangaTitle(post.mangaReference!)}',
+                      'Tham chiếu: ${_getMangaTitle(post.mangaReference!)}',
                       style: TextStyle(
                         color: Color(0xFF06b6d4),
                         fontWeight: FontWeight.w500,
@@ -152,7 +259,6 @@ class _SocialScreenState extends State<SocialScreen> {
               ),
             ],
 
-            // Post images
             if (post.images.isNotEmpty) ...[
               SizedBox(height: 12),
               Container(
@@ -188,13 +294,12 @@ class _SocialScreenState extends State<SocialScreen> {
 
             SizedBox(height: 16),
 
-            // Action buttons
             Row(
               children: [
                 _buildActionButton(
                   icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
                   label: post.likes.toString(),
-                  color: post.isLiked ? Color(0xFFec4899) : Colors.grey[600]!,
+                  color: post.isLiked ? Color(0xFFec4899) : Colors.white54,
                   onTap: () {
                     setState(() {
                       final index = posts.indexOf(post);
@@ -209,6 +314,7 @@ class _SocialScreenState extends State<SocialScreen> {
                         shares: post.shares,
                         isLiked: !post.isLiked,
                         mangaReference: post.mangaReference,
+                        community: post.community,
                       );
                     });
                   },
@@ -217,7 +323,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 _buildActionButton(
                   icon: Icons.chat_bubble_outline,
                   label: post.comments.toString(),
-                  color: Colors.grey[600]!,
+                  color: Colors.white54,
                   onTap: () {
                     _showCommentsBottomSheet(context, post);
                   },
@@ -226,7 +332,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 _buildActionButton(
                   icon: Icons.share_outlined,
                   label: post.shares.toString(),
-                  color: Colors.grey[600]!,
+                  color: Colors.white54,
                   onTap: () {
                     _showShareOptions(context, post);
                   },
@@ -235,7 +341,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 IconButton(
                   icon: Icon(Icons.bookmark_border),
                   onPressed: () {},
-                  color: Colors.grey[600],
+                  color: Colors.white54,
                 ),
               ],
             ),
@@ -245,42 +351,18 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return '${difference.inDays} ngày trước';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return '${difference.inHours} giờ trước';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return '${difference.inMinutes} phút trước';
     } else {
-      return 'Just now';
+      return 'Vừa xong';
     }
   }
 
@@ -292,6 +374,100 @@ class _SocialScreenState extends State<SocialScreen> {
     return manga.title;
   }
 
+  void _showCreateGroupDialog(BuildContext context) {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController descController = TextEditingController();
+    bool isPrivate = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Color(0xFF1e293b),
+              title: Text('Tạo Nhóm/Cộng Đồng', style: TextStyle(color: Colors.white)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Tên nhóm',
+                        labelStyle: TextStyle(color: Colors.cyan),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFF0f172a),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Mô tả',
+                        labelStyle: TextStyle(color: Colors.cyan),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFF0f172a),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    SwitchListTile(
+                      title: Text('Nhóm riêng tư', style: TextStyle(color: Colors.white)),
+                      subtitle: Text(
+                        'Yêu cầu phê duyệt để tham gia',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      value: isPrivate,
+                      activeColor: Colors.cyan,
+                      onChanged: (value) {
+                        setState(() {
+                          isPrivate = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Hủy', style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (nameController.text.isNotEmpty) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã tạo nhóm "${nameController.text}"!'),
+                          backgroundColor: Colors.cyan,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF06b6d4),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Tạo'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showCreatePostDialog(BuildContext context) {
     final TextEditingController contentController = TextEditingController();
     
@@ -299,18 +475,23 @@ class _SocialScreenState extends State<SocialScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Create Post'),
+          backgroundColor: Color(0xFF1e293b),
+          title: Text('Tạo Bài Đăng', style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: contentController,
                 maxLines: 4,
+                style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'What\'s on your mind about manga?',
+                  hintText: 'Bạn đang nghĩ gì về truyện tranh?',
+                  hintStyle: TextStyle(color: Colors.white38),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  filled: true,
+                  fillColor: Color(0xFF0f172a),
                 ),
               ),
               SizedBox(height: 16),
@@ -331,15 +512,14 @@ class _SocialScreenState extends State<SocialScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: Text('Hủy', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               onPressed: () {
                 if (contentController.text.isNotEmpty) {
-                  // Add new post logic here
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Post created!')),
+                    SnackBar(content: Text('Đã tạo bài đăng!')),
                   );
                 }
               },
@@ -347,7 +527,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 backgroundColor: Color(0xFF06b6d4),
                 foregroundColor: Colors.white,
               ),
-              child: Text('Post'),
+              child: Text('Đăng'),
             ),
           ],
         );
@@ -358,6 +538,7 @@ class _SocialScreenState extends State<SocialScreen> {
   void _showPostOptions(BuildContext context, Post post) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Color(0xFF1e293b),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -368,18 +549,18 @@ class _SocialScreenState extends State<SocialScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.bookmark_outline),
-                title: Text('Save Post'),
+                leading: Icon(Icons.bookmark_outline, color: Colors.white),
+                title: Text('Lưu bài đăng', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.report_outlined),
-                title: Text('Report Post'),
+                leading: Icon(Icons.report_outlined, color: Colors.white),
+                title: Text('Báo cáo bài đăng', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.block),
-                title: Text('Hide from ${post.user.name}'),
+                leading: Icon(Icons.block, color: Colors.white),
+                title: Text('Ẩn từ ${post.user.name}', style: TextStyle(color: Colors.white)),
                 onTap: () => Navigator.pop(context),
               ),
             ],
@@ -393,6 +574,7 @@ class _SocialScreenState extends State<SocialScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Color(0xFF1e293b),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -410,33 +592,63 @@ class _SocialScreenState extends State<SocialScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Colors.white24,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Comments (${post.comments})',
+                    'Bình luận (${post.comments})',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 16),
                   Expanded(
                     child: ListView.builder(
                       controller: scrollController,
-                      itemCount: 5, // Mock comments
+                      itemCount: 5,
                       itemBuilder: (context, index) {
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 16,
-                            backgroundImage: NetworkImage(
-                              '/placeholder.svg?height=32&width=32',
-                            ),
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0f172a),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          title: Text('User ${index + 1}'),
-                          subtitle: Text('This is a sample comment about the post.'),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundImage: NetworkImage(
+                                  '/placeholder.svg?height=32&width=32',
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Người dùng ${index + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Đây là bình luận mẫu về bài đăng.',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -444,20 +656,22 @@ class _SocialScreenState extends State<SocialScreen> {
                   Container(
                     padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.grey[300]!)),
+                      border: Border(top: BorderSide(color: Colors.white12)),
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: TextField(
+                            style: TextStyle(color: Colors.white),
                             decoration: InputDecoration(
-                              hintText: 'Write a comment...',
+                              hintText: 'Viết bình luận...',
+                              hintStyle: TextStyle(color: Colors.white38),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
-                              fillColor: Colors.grey[100],
+                              fillColor: Color(0xFF0f172a),
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
@@ -485,6 +699,7 @@ class _SocialScreenState extends State<SocialScreen> {
   void _showShareOptions(BuildContext context, Post post) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Color(0xFF1e293b),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -495,19 +710,20 @@ class _SocialScreenState extends State<SocialScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Share Post',
+                'Chia Sẻ Bài Đăng',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
               SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildShareOption(Icons.copy, 'Copy Link'),
-                  _buildShareOption(Icons.message, 'Message'),
-                  _buildShareOption(Icons.share, 'More'),
+                  _buildShareOption(Icons.copy, 'Sao chép'),
+                  _buildShareOption(Icons.message, 'Tin nhắn'),
+                  _buildShareOption(Icons.share, 'Khác'),
                 ],
               ),
             ],
@@ -523,7 +739,7 @@ class _SocialScreenState extends State<SocialScreen> {
         Container(
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Color(0xFF06b6d4).withOpacity(0.1),
+            color: Color(0xFF06b6d4).withOpacity(0.2),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: Color(0xFF06b6d4)),
@@ -531,9 +747,33 @@ class _SocialScreenState extends State<SocialScreen> {
         SizedBox(height: 8),
         Text(
           label,
-          style: TextStyle(fontSize: 12),
+          style: TextStyle(fontSize: 12, color: Colors.white),
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

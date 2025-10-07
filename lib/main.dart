@@ -8,31 +8,42 @@ import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() {
-  runApp(MangaSocialApp());
+  runApp(LoryApp());
 }
 
-class MangaSocialApp extends StatelessWidget {
+class LoryApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Truyện Tranh', 
+      title: 'Lory - Cộng đồng đọc truyện',
       theme: ThemeData(
-        primarySwatch: Colors.cyan,
+        brightness: Brightness.dark,
         primaryColor: Color(0xFF06b6d4),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Color(0xFF06b6d4),
+        scaffoldBackgroundColor: Color(0xFF0f172a),
+        colorScheme: ColorScheme.dark(
+          primary: Color(0xFF06b6d4),
           secondary: Color(0xFFec4899),
+          surface: Color(0xFF1e293b),
+          background: Color(0xFF0f172a),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1e293b),
+          backgroundColor: Color(0xFF1e293b),
+          foregroundColor: Colors.white,
           elevation: 0,
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
+          backgroundColor: Color(0xFF1e293b),
           selectedItemColor: Color(0xFF06b6d4),
-          unselectedItemColor: Colors.grey[600],
+          unselectedItemColor: Colors.grey[500],
           type: BottomNavigationBarType.fixed,
+        ),
+        cardTheme: CardThemeData(
+          color: Color(0xFF1e293b),
+          elevation: 2,
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white70),
         ),
       ),
       initialRoute: '/login',
@@ -75,19 +86,19 @@ class _MainScreenState extends State<MainScreen> {
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Trang Chủ', 
+            label: 'Trang Chủ',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.library_books),
-            label: 'Thư Viện', 
+            label: 'Thư Viện',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
-            label: 'Cộng Đồng', 
+            label: 'Cộng Đồng',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Hồ Sơ', 
+            label: 'Hồ Sơ',
           ),
         ],
       ),

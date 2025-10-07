@@ -1,30 +1,48 @@
 import 'package:flutter/material.dart';
 import '../models/manga.dart';
-
+import '../models/comment.dart';
 class DetailScreen extends StatefulWidget {
   @override
   _DetailScreenState createState() => _DetailScreenState();
 }
 
-class _DetailScreenState extends State<DetailScreen> {
+class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderStateMixin {
   bool isFollowed = false;
   bool isLiked = false;
+  double userRating = 0;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final Manga manga = ModalRoute.of(context)!.settings.arguments as Manga;
     
-    setState(() {
-      isFollowed = manga.isFollowed;
-      isLiked = manga.isLiked;
-    });
+    if (!isFollowed && !isLiked) {
+      setState(() {
+        isFollowed = manga.isFollowed;
+        isLiked = manga.isLiked;
+      });
+    }
 
     return Scaffold(
+      backgroundColor: Color(0xFF0f172a),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
+            backgroundColor: Color(0xFF1e293b),
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -38,7 +56,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Color(0xFF0f172a),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -50,19 +68,21 @@ class _DetailScreenState extends State<DetailScreen> {
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.share),
-                onPressed: () {},
+                icon: Icon(Icons.share, color: Colors.white),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Chia sẻ truyện')),
+                  );
+                },
               ),
             ],
           ),
-          
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and basic info
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -73,17 +93,17 @@ class _DetailScreenState extends State<DetailScreen> {
                             Text(
                               manga.title,
                               style: TextStyle(
-                                fontSize: 28,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1e293b),
+                                color: Colors.white,
                               ),
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'by ${manga.author}',
+                              'Tác giả: ${manga.author}',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
+                                fontSize: 14,
+                                color: Colors.white70,
                               ),
                             ),
                           ],
@@ -93,16 +113,21 @@ class _DetailScreenState extends State<DetailScreen> {
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: manga.status == 'ongoing' 
-                              ? Color(0xFF06b6d4).withOpacity(0.1)
-                              : Color(0xFF10b981).withOpacity(0.1),
+                              ? Color(0xFF10b981).withOpacity(0.2)
+                              : Color(0xFF06b6d4).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: manga.status == 'ongoing' 
+                                ? Color(0xFF10b981)
+                                : Color(0xFF06b6d4),
+                          ),
                         ),
                         child: Text(
-                          manga.status.toUpperCase(),
+                          manga.status == 'ongoing' ? 'Đang ra' : 'Hoàn thành',
                           style: TextStyle(
                             color: manga.status == 'ongoing' 
-                                ? Color(0xFF06b6d4)
-                                : Color(0xFF10b981),
+                                ? Color(0xFF10b981)
+                                : Color(0xFF06b6d4),
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -113,64 +138,89 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   SizedBox(height: 16),
 
-                  // Rating and views
                   Row(
                     children: [
-                      Icon(Icons.star, color: Color(0xFFfbbf24), size: 20),
-                      SizedBox(width: 4),
-                      Text(
-                        manga.rating.toString(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      Icon(Icons.visibility, color: Colors.grey[600], size: 20),
-                      SizedBox(width: 4),
-                      Text(
-                        '${manga.views ~/ 1000}K views',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      _buildStatItem(Icons.star, '${manga.rating}', '(${manga.totalRatings} đánh giá)'),
+                      SizedBox(width: 24),
+                      _buildStatItem(Icons.visibility, '${manga.views ~/ 1000}K', 'lượt xem'),
+                      SizedBox(width: 24),
+                      _buildStatItem(Icons.menu_book, '${manga.chapters.length}', 'chương'),
                     ],
                   ),
 
-                  SizedBox(height: 16),
+                  SizedBox(height: 20),
 
-                  // Action buttons
                   Row(
                     children: [
                       Expanded(
+                        flex: 2,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            setState(() {
-                              isFollowed = !isFollowed;
-                            });
+                            // Tìm chương đã đọc gần nhất hoặc chương đầu
+                            final lastReadChapter = manga.chapters.firstWhere(
+                              (c) => c.isRead,
+                              orElse: () => manga.chapters.first,
+                            );
+                            Navigator.pushNamed(
+                              context,
+                              '/reader',
+                              arguments: {
+                                'manga': manga,
+                                'chapter': lastReadChapter,
+                              },
+                            );
                           },
-                          icon: Icon(
-                            isFollowed ? Icons.check : Icons.add,
-                            color: Colors.white,
-                          ),
+                          icon: Icon(Icons.play_arrow, color: Colors.white),
                           label: Text(
-                            isFollowed ? 'Following' : 'Follow',
-                            style: TextStyle(color: Colors.white),
+                            manga.chapters.any((c) => c.isRead) ? 'Đọc tiếp' : 'Đọc từ đầu',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isFollowed 
-                                ? Colors.grey[600] 
-                                : Color(0xFF06b6d4),
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Color(0xFF06b6d4),
+                            padding: EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
                       ),
                       SizedBox(width: 12),
-                      ElevatedButton.icon(
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              isFollowed = !isFollowed;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isFollowed ? 'Đã theo dõi' : 'Đã bỏ theo dõi'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            isFollowed ? Icons.check : Icons.add,
+                            color: isFollowed ? Color(0xFF10b981) : Colors.white,
+                          ),
+                          label: Text(
+                            isFollowed ? 'Đã theo dõi' : 'Theo dõi',
+                            style: TextStyle(
+                              color: isFollowed ? Color(0xFF10b981) : Colors.white,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: isFollowed ? Color(0xFF10b981) : Colors.white38,
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      IconButton(
                         onPressed: () {
                           setState(() {
                             isLiked = !isLiked;
@@ -178,23 +228,12 @@ class _DetailScreenState extends State<DetailScreen> {
                         },
                         icon: Icon(
                           isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: isLiked ? Colors.white : Color(0xFFec4899),
+                          color: isLiked ? Color(0xFFec4899) : Colors.white,
+                          size: 28,
                         ),
-                        label: Text(
-                          'Like',
-                          style: TextStyle(
-                            color: isLiked ? Colors.white : Color(0xFFec4899),
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLiked 
-                              ? Color(0xFFec4899) 
-                              : Colors.white,
-                          side: BorderSide(color: Color(0xFFec4899)),
-                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Color(0xFF1e293b),
+                          padding: EdgeInsets.all(12),
                         ),
                       ),
                     ],
@@ -202,13 +241,12 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   SizedBox(height: 24),
 
-                  // Genres
                   Text(
-                    'Genres',
+                    'Thể loại',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 8),
@@ -219,8 +257,9 @@ class _DetailScreenState extends State<DetailScreen> {
                       return Container(
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Color(0xFF06b6d4).withOpacity(0.1),
+                          color: Color(0xFF06b6d4).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xFF06b6d4)),
                         ),
                         child: Text(
                           genre,
@@ -235,100 +274,99 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   SizedBox(height: 24),
 
-                  // Description
                   Text(
-                    'Description',
+                    'Mô tả',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1e293b),
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
                     manga.description,
                     style: TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
-                      color: Colors.grey[700],
+                      fontSize: 15,
+                      height: 1.6,
+                      color: Colors.white70,
                     ),
                   ),
 
                   SizedBox(height: 24),
 
-                  // Chapters
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Chapters (${manga.chapters.length})',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1e293b),
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1e293b),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Đánh giá của bạn',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: Text('Sort by'),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: manga.chapters.length,
-                    itemBuilder: (context, index) {
-                      final chapter = manga.chapters[index];
-                      return Card(
-                        margin: EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Color(0xFF06b6d4).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Text(
-                                chapter.number.toString(),
-                                style: TextStyle(
-                                  color: Color(0xFF06b6d4),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            chapter.title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          subtitle: Text(
-                            chapter.releaseDate,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          trailing: chapter.isRead
-                              ? Icon(Icons.check_circle, color: Color(0xFF10b981))
-                              : Icon(Icons.play_arrow, color: Color(0xFF06b6d4)),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/reader',
-                              arguments: {
-                                'manga': manga,
-                                'chapter': chapter,
+                        SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(5, (index) {
+                            return IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  userRating = index + 1.0;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Đã đánh giá ${index + 1} sao'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
                               },
+                              icon: Icon(
+                                index < userRating ? Icons.star : Icons.star_border,
+                                color: Color(0xFFfbbf24),
+                                size: 32,
+                              ),
                             );
-                          },
+                          }),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 24),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1e293b),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Color(0xFF06b6d4),
+                      labelColor: Color(0xFF06b6d4),
+                      unselectedLabelColor: Colors.white54,
+                      tabs: [
+                        Tab(text: 'Chương (${manga.chapters.length})'),
+                        Tab(text: 'Bình luận (${manga.comments.length})'),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Container(
+                    height: 400,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildChapterList(manga),
+                        _buildCommentList(manga),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -337,5 +375,284 @@ class _DetailScreenState extends State<DetailScreen> {
         ],
       ),
     );
+  }
+
+  // Widget thống kê
+  Widget _buildStatItem(IconData icon, String value, String label) {
+    return Row(
+      children: [
+        Icon(icon, color: Color(0xFFfbbf24), size: 20),
+        SizedBox(width: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white54,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Danh sách chương
+  Widget _buildChapterList(Manga manga) {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: manga.chapters.length,
+      itemBuilder: (context, index) {
+        final chapter = manga.chapters[index];
+        return Container(
+          margin: EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: Color(0xFF1e293b),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: chapter.isRead 
+                    ? Color(0xFF10b981).withOpacity(0.2)
+                    : Color(0xFF06b6d4).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  chapter.number.toString(),
+                  style: TextStyle(
+                    color: chapter.isRead ? Color(0xFF10b981) : Color(0xFF06b6d4),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            title: Text(
+              chapter.title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+            subtitle: Text(
+              chapter.releaseDate,
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+            trailing: chapter.isRead
+                ? Icon(Icons.check_circle, color: Color(0xFF10b981))
+                : Icon(Icons.play_circle_outline, color: Color(0xFF06b6d4)),
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                '/reader',
+                arguments: {
+                  'manga': manga,
+                  'chapter': chapter,
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Danh sách bình luận
+  Widget _buildCommentList(Manga manga) {
+    return Column(
+      children: [
+        // Nút thêm bình luận
+        Container(
+          margin: EdgeInsets.only(bottom: 16),
+          child: ElevatedButton.icon(
+            onPressed: () {
+              _showAddCommentDialog();
+            },
+            icon: Icon(Icons.add_comment, color: Colors.white),
+            label: Text('Thêm bình luận', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF06b6d4),
+              minimumSize: Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        // Danh sách bình luận
+        Expanded(
+          child: manga.comments.isEmpty
+              ? Center(
+                  child: Text(
+                    'Chưa có bình luận nào',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: manga.comments.length,
+                  itemBuilder: (context, index) {
+                    final comment = manga.comments[index];
+                    return _buildCommentItem(comment);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Widget bình luận
+  Widget _buildCommentItem(Comment comment) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Color(0xFF1e293b),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: NetworkImage(comment.userAvatar),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      comment.userName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      _formatTime(comment.createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            comment.content,
+            style: TextStyle(
+              color: Colors.white70,
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () {},
+                icon: Icon(
+                  comment.isLiked ? Icons.favorite : Icons.favorite_border,
+                  size: 16,
+                  color: comment.isLiked ? Color(0xFFec4899) : Colors.white54,
+                ),
+                label: Text(
+                  '${comment.likes}',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {},
+                icon: Icon(Icons.reply, size: 16, color: Colors.white54),
+                label: Text('Trả lời', style: TextStyle(color: Colors.white54)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Dialog thêm bình luận
+  void _showAddCommentDialog() {
+    final commentController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Color(0xFF1e293b),
+          title: Text('Thêm bình luận', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: commentController,
+            maxLines: 4,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Nhập bình luận của bạn...',
+              hintStyle: TextStyle(color: Colors.white38),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Color(0xFF0f172a),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (commentController.text.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Đã thêm bình luận')),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF06b6d4),
+              ),
+              child: Text('Gửi', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Format thời gian
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+    
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} phút trước';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} giờ trước';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} ngày trước';
+    } else {
+      return '${time.day}/${time.month}/${time.year}';
+    }
   }
 }
