@@ -11,9 +11,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final PageController _bannerController = PageController();
+  final PageController _bannerController = PageController(initialPage: 5000);
   final ScrollController _scrollController = ScrollController();
-  
+
   List<Manga> _filteredManga = MockData.mangaList;
   Timer? _bannerTimer;
   int _currentBannerPage = 0;
@@ -43,8 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Bắt đầu tự động cuộn banner
   void _startBannerAutoScroll() {
     _bannerTimer = Timer.periodic(Duration(seconds: 4), (timer) {
-      if (_bannerController.hasClients) {
-        final nextPage = (_currentBannerPage + 1) % MockData.featuredManga.length;
+    if (_bannerController.hasClients) {
+      // Lấy trang hiện tại, sau đó cộng 1
+      final nextPage = _bannerController.page!.toInt() + 1;
         _bannerController.animateToPage(
           nextPage,
           duration: Duration(milliseconds: 500),
@@ -56,12 +57,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Xử lý lazy loading khi scroll
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // Load thêm truyện khi gần cuối danh sách
       if (_displayedMangaCount < _filteredManga.length) {
         setState(() {
-          _displayedMangaCount = (_displayedMangaCount + 6).clamp(0, _filteredManga.length);
+          _displayedMangaCount =
+              (_displayedMangaCount + 6).clamp(0, _filteredManga.length);
         });
       }
     }
@@ -142,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             Container(
               height: 180,
               child: PageView.builder(
@@ -152,11 +153,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     _currentBannerPage = index;
                   });
                 },
-                itemCount: (MockData.featuredManga.length / 2).ceil(),
+                itemCount: MockData.featuredManga.isEmpty ? 0 : 10000,
                 itemBuilder: (context, pageIndex) {
-                  final startIndex = pageIndex * 2;
-                  final endIndex = (startIndex + 2).clamp(0, MockData.featuredManga.length);
-                  final mangasInPage = MockData.featuredManga.sublist(startIndex, endIndex);
+                  final actualItemCount =
+                      MockData.featuredManga.length; // Giả sử là 4 item
+                  if (actualItemCount == 0) return SizedBox.shrink();
+
+                  // Tính chỉ mục bắt đầu thực tế của dữ liệu (0, 2, 0, 2, ...)
+                  final baseIndex = (pageIndex * 2) % actualItemCount;
+
+                  // Lấy 2 item từ danh sách thực tế, sử dụng phép toán modulo để lặp lại
+                  final manga1 = MockData.featuredManga[baseIndex];
+                  final manga2 =
+                      MockData.featuredManga[(baseIndex + 1) % actualItemCount];
+
+                  final mangasInPage = [
+                    manga1,
+                    manga2
+                  ]; // Danh sách 2 item cho trang hiện tại
 
                   return Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
@@ -172,7 +186,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             },
                             child: Container(
-                              margin: EdgeInsets.only(right: mangasInPage.last == manga ? 0 : 8),
+                              margin: EdgeInsets.only(
+                                  right: mangasInPage.last == manga ? 0 : 8),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 gradient: LinearGradient(
@@ -213,7 +228,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     left: 12,
                                     right: 12,
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           manga.title,
@@ -228,7 +244,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         SizedBox(height: 4),
                                         Row(
                                           children: [
-                                            Icon(Icons.star, color: Color(0xFFfbbf24), size: 12),
+                                            Icon(Icons.star,
+                                                color: Color(0xFFfbbf24),
+                                                size: 12),
                                             SizedBox(width: 4),
                                             Text(
                                               manga.rating.toString(),
@@ -253,7 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
-
             SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -272,27 +289,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             SizedBox(height: 24),
-
             _buildMangaSection(
               title: 'Truyện Hot',
               icon: Icons.local_fire_department,
               iconColor: Color(0xFFef4444),
               mangaList: MockData.hotManga.take(6).toList(),
             ),
-
             SizedBox(height: 24),
-
             _buildMangaSection(
               title: 'Mới Cập Nhật',
               icon: Icons.update,
               iconColor: Color(0xFF10b981),
               mangaList: MockData.recentlyUpdatedManga.take(6).toList(),
             ),
-
             SizedBox(height: 24),
-
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -335,17 +346,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 return _buildMangaCard(manga);
               },
             ),
-
             if (_displayedMangaCount < _filteredManga.length)
               Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
                   ),
                 ),
               ),
-
             SizedBox(height: 20),
           ],
         ),
@@ -459,7 +469,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Color(0xFF06b6d4),
                           borderRadius: BorderRadius.circular(8),
