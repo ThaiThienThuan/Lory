@@ -43,9 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Bắt đầu tự động cuộn banner
   void _startBannerAutoScroll() {
     _bannerTimer = Timer.periodic(Duration(seconds: 4), (timer) {
-    if (_bannerController.hasClients) {
-      // Lấy trang hiện tại, sau đó cộng 1
-      final nextPage = _bannerController.page!.toInt() + 1;
+      if (_bannerController.hasClients) {
+        // Lấy trang hiện tại, sau đó cộng 1
+        final nextPage = _bannerController.page!.toInt() + 1;
         _bannerController.animateToPage(
           nextPage,
           duration: Duration(milliseconds: 500),
@@ -461,6 +461,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       manga.cover,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Color(0xFF1e293b),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Color(0xFF1e293b),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image_outlined,
+                                size: 48,
+                                color: Color(0xFF06b6d4).withOpacity(0.5),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Manga Cover',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                   // Badge trạng thái

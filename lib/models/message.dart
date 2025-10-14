@@ -1,5 +1,3 @@
-import 'user.dart';
-
 // Model cho tin nhắn
 class Message {
   final String id;
@@ -15,19 +13,40 @@ class Message {
     required this.isMe,
     this.isRead = false,
   });
-}
 
-// Model cho cuộc hội thoại
-class Conversation {
-  final String id;
-  final User user;
-  final Message lastMessage;
-  final int unreadCount;
+  factory Message.fromJson(Map<String, dynamic> json) {
+    return Message(
+      id: json['id'] as String,
+      content: json['content'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      isMe: json['isMe'] as bool,
+      isRead: json['isRead'] as bool? ?? false,
+    );
+  }
 
-  Conversation({
-    required this.id,
-    required this.user,
-    required this.lastMessage,
-    this.unreadCount = 0,
-  });
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'content': content,
+      'timestamp': timestamp.toIso8601String(),
+      'isMe': isMe,
+      'isRead': isRead,
+    };
+  }
+
+  Message copyWith({
+    String? id,
+    String? content,
+    DateTime? timestamp,
+    bool? isMe,
+    bool? isRead,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+      isMe: isMe ?? this.isMe,
+      isRead: isRead ?? this.isRead,
+    );
+  }
 }

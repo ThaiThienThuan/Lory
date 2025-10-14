@@ -5,11 +5,18 @@ import 'screens/reader_screen.dart';
 import 'screens/social_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/profile_screen.dart';
+import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(LoryApp());
 }
+
 
 class LoryApp extends StatelessWidget {
   @override

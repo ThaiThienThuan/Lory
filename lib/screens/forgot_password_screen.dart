@@ -70,7 +70,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(24.0),
           child: _emailSent ? _buildSuccessView() : _buildFormView(),
         ),

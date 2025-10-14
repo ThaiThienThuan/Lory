@@ -1,22 +1,28 @@
 import '../models/user.dart';
+
 import '../models/manga.dart';
+
 import '../models/post.dart';
+
 import '../models/comment.dart'; // Import Comment model
+
 import '../models/gallery.dart'; // Import Gallery model
+
 import '../models/translation_group.dart'; // Import TranslationGroup model
+
 import '../models/community.dart';
+
 import '../models/message.dart';
+import '../models/conversation.dart'; // Import Conversation model
+
 
 class MockData {
-  // URL placeholder mới
-  static const String _placeholderUrl = 'https://www.nomadfoods.com/wp-content/uploads/2018/08/placeholder-1-e1533569576673.png';
-
   // Dữ liệu người dùng mẫu
   static final List<User> users = [
     User(
       id: '1',
       name: 'Akira Tanaka',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://i.pravatar.cc/150?img=1',
       bio: 'Người đam mê truyện tranh | Yêu thích thể loại hành động và lãng mạn',
       followers: 1250,
       following: 340,
@@ -25,7 +31,7 @@ class MockData {
     User(
       id: '2',
       name: 'Sakura Yamamoto',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://i.pravatar.cc/150?img=5',
       bio: 'Họa sĩ và nhà phê bình truyện tranh | Đang vẽ câu chuyện của riêng mình',
       followers: 2100,
       following: 180,
@@ -34,7 +40,7 @@ class MockData {
     User(
       id: '3',
       name: 'Hiroshi Sato',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://i.pravatar.cc/150?img=12',
       bio: 'Người sưu tập truyện tranh hiếm | 15 năm kinh nghiệm đọc truyện',
       followers: 890,
       following: 420,
@@ -47,7 +53,7 @@ class MockData {
     Manga(
       id: '1',
       title: 'Di Sản Rồng Thiêng',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga1/200/300',
       description: 'Một chiến binh trẻ khám phá ra mối liên hệ của mình với những con rồng cổ đại và phải cứu thế giới khỏi một phù thủy tà ác đang đe dọa phá hủy mọi thứ anh ta yêu quý.',
       genres: ['Action', 'Fantasy', 'Adventure', 'Manga'],
       rating: 4.8,
@@ -60,7 +66,7 @@ class MockData {
           id: 'c1',
           userId: '1',
           userName: 'Akira Tanaka',
-          userAvatar: _placeholderUrl, // ĐÃ SỬA
+          userAvatar: 'https://i.pravatar.cc/150?img=1',
           content: 'Truyện hay quá! Đồ họa đẹp và cốt truyện hấp dẫn. Rất đáng đọc!',
           createdAt: DateTime.now().subtract(Duration(hours: 2)),
           likes: 15,
@@ -70,7 +76,7 @@ class MockData {
           id: 'c2',
           userId: '2',
           userName: 'Sakura Yamamoto',
-          userAvatar: _placeholderUrl, // ĐÃ SỬA
+          userAvatar: 'https://i.pravatar.cc/150?img=5',
           content: 'Nhân vật chính rất được phát triển tốt. Mong chờ chương tiếp theo!',
           createdAt: DateTime.now().subtract(Duration(hours: 5)),
           likes: 8,
@@ -82,7 +88,7 @@ class MockData {
           title: 'Sự Thức Tỉnh',
           number: 1,
           releaseDate: '2 giờ trước',
-          pages: List.generate(15, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(15, (i) => 'https://picsum.photos/seed/page${i}/600/800'),
           likes: 234,
           isLiked: false,
           comments: [
@@ -90,7 +96,7 @@ class MockData {
               id: 'cc1',
               userId: '3',
               userName: 'Hiroshi Sato',
-              userAvatar: _placeholderUrl, // ĐÃ SỬA
+              userAvatar: 'https://i.pravatar.cc/150?img=12',
               content: 'Chương mở đầu rất ấn tượng!',
               createdAt: DateTime.now().subtract(Duration(minutes: 30)),
               likes: 5,
@@ -102,7 +108,7 @@ class MockData {
           title: 'Trận Chiến Đầu Tiên',
           number: 2,
           releaseDate: '1 ngày trước',
-          pages: List.generate(18, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(18, (i) => 'https://picsum.photos/seed/page${i+15}/600/800'),
           likes: 189,
           comments: [],
         ),
@@ -111,7 +117,7 @@ class MockData {
           title: 'Sức Mạnh Tiềm Ẩn',
           number: 3,
           releaseDate: '3 ngày trước',
-          pages: List.generate(20, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(20, (i) => 'https://picsum.photos/seed/page${i+33}/600/800'),
           likes: 156,
           comments: [],
         ),
@@ -122,7 +128,7 @@ class MockData {
     Manga(
       id: '2',
       title: 'Tình Yêu Tuổi 17',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga2/200/300',
       description: 'Một câu chuyện ấm áp về tình yêu tuổi teen, tình bạn và trưởng thành ở Tokyo hiện đại. Theo chân Yuki và những người bạn qua năm cuối cấp ba.',
       genres: ['Romance', 'Slice of Life', 'Comedy', 'Manga'],
       rating: 4.6,
@@ -137,7 +143,7 @@ class MockData {
           title: 'Học Kỳ Mới',
           number: 1,
           releaseDate: '5 giờ trước',
-          pages: List.generate(16, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(16, (i) => 'https://picsum.photos/seed/page2${i}/600/800'),
           likes: 145,
           comments: [],
         ),
@@ -146,7 +152,7 @@ class MockData {
           title: 'Cuộc Gặp Gỡ Định Mệnh',
           number: 2,
           releaseDate: '2 ngày trước',
-          pages: List.generate(17, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(17, (i) => 'https://picsum.photos/seed/page2${i+16}/600/800'),
           likes: 132,
           comments: [],
         ),
@@ -157,7 +163,7 @@ class MockData {
     Manga(
       id: '3',
       title: 'Biên Niên Sử Ninja Mạng',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga3/200/300',
       description: 'Trong một tương lai dystopia nơi công nghệ và võ thuật cổ đại va chạm, một ninja trẻ phải điều hướng thế giới ngầm kỹ thuật số để khám phá một âm mưu.',
       genres: ['Action', 'Sci-Fi', 'Thriller', 'Manga'],
       rating: 4.7,
@@ -172,7 +178,7 @@ class MockData {
           title: 'Bóng Tối Kỹ Thuật Số',
           number: 1,
           releaseDate: '1 tuần trước',
-          pages: List.generate(22, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(22, (i) => 'https://picsum.photos/seed/page3${i}/600/800'),
           likes: 278,
           comments: [],
         ),
@@ -183,7 +189,7 @@ class MockData {
     Manga(
       id: '4',
       title: 'Học Viện Nữ Phù Thủy',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga4/200/300',
       description: 'Những cô gái trẻ với sức mạnh phép thuật theo học tại một học viện đặc biệt để học cách bảo vệ thế giới khỏi các thế lực đen tối trong khi đối phó với những vấn đề tuổi teen thông thường.',
       genres: ['Magic', 'Comedy', 'Friendship', 'Manhwa'],
       rating: 4.4,
@@ -198,7 +204,7 @@ class MockData {
           title: 'Chào Mừng Đến Học Viện',
           number: 1,
           releaseDate: '3 giờ trước',
-          pages: List.generate(19, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(19, (i) => 'https://picsum.photos/seed/page4${i}/600/800'),
           likes: 98,
           comments: [],
         ),
@@ -209,7 +215,7 @@ class MockData {
     Manga(
       id: '5',
       title: 'Võ Thần Truyền Kỳ',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga5/200/300',
       description: 'Hành trình tu luyện của một thiếu niên từ kẻ yếu đuối trở thành võ thần tối cao, chinh phục các đỉnh cao võ học và bảo vệ người thân.',
       genres: ['Action', 'Martial Arts', 'Adventure', 'Manhua'],
       rating: 4.9,
@@ -224,7 +230,7 @@ class MockData {
           title: 'Khởi Đầu Tu Luyện',
           number: 1,
           releaseDate: '1 giờ trước',
-          pages: List.generate(25, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(25, (i) => 'https://picsum.photos/seed/page5${i}/600/800'),
           likes: 456,
           comments: [],
         ),
@@ -235,7 +241,7 @@ class MockData {
     Manga(
       id: '6',
       title: 'Thám Tử Thành Phố',
-      cover: _placeholderUrl, // ĐÃ SỬA
+      cover: 'https://picsum.photos/seed/manga6/200/300',
       description: 'Một thám tử tài ba giải quyết những vụ án bí ẩn nhất thành phố với trí thông minh phi thường và khả năng quan sát tuyệt vời.',
       genres: ['Mystery', 'Thriller', 'Drama', 'Manga'],
       rating: 4.5,
@@ -250,7 +256,7 @@ class MockData {
           title: 'Vụ Án Đầu Tiên',
           number: 1,
           releaseDate: '4 giờ trước',
-          pages: List.generate(21, (i) => _placeholderUrl), // ĐÃ SỬA
+          pages: List.generate(21, (i) => 'https://picsum.photos/seed/page6${i}/600/800'),
           likes: 167,
           comments: [],
         ),
@@ -266,7 +272,7 @@ class MockData {
       id: '1',
       user: users[0],
       content: 'Vừa đọc xong chương mới nhất của Di Sản Rồng Thiêng! Tình tiết bất ngờ thật không thể tin được! Không thể chờ đợi chương tiếp theo!',
-      images: [_placeholderUrl], // ĐÃ SỬA
+      images: ['https://picsum.photos/seed/post1/400/300'],
       createdAt: DateTime.now().subtract(Duration(hours: 2)),
       likes: 45,
       comments: 12,
@@ -279,7 +285,7 @@ class MockData {
       id: '2',
       user: users[1],
       content: 'Đang vẽ fan art cho Tình Yêu Tuổi 17! Đây là cách tôi hình dung Yuki-chan',
-      images: [_placeholderUrl], // ĐÃ SỬA
+      images: ['https://picsum.photos/seed/post2/300/400'],
       createdAt: DateTime.now().subtract(Duration(hours: 5)),
       likes: 78,
       comments: 23,
@@ -292,7 +298,7 @@ class MockData {
       id: '3',
       user: users[2],
       content: 'Bộ sưu tập truyện tranh của tôi đang phát triển! Vừa thêm 5 tập mới vào kệ. Có ai gợi ý truyện kinh dị hay không?',
-      images: [_placeholderUrl], // ĐÃ SỬA
+      images: ['https://picsum.photos/seed/post3/400/300'],
       createdAt: DateTime.now().subtract(Duration(hours: 8)),
       likes: 32,
       comments: 18,
@@ -318,10 +324,10 @@ class MockData {
     GalleryItem(
       id: 'g1',
       title: 'Di Sản Rồng Thiêng - Fan Art',
-      imageUrl: _placeholderUrl, // ĐÃ SỬA
+      imageUrl: 'https://picsum.photos/seed/gallery1/300/400',
       artistId: '2',
       artistName: 'Sakura Yamamoto',
-      artistAvatar: _placeholderUrl, // ĐÃ SỬA
+      artistAvatar: 'https://i.pravatar.cc/150?img=5',
       mangaReference: '1',
       mangaTitle: 'Di Sản Rồng Thiêng',
       createdAt: DateTime.now().subtract(Duration(hours: 3)),
@@ -333,10 +339,10 @@ class MockData {
     GalleryItem(
       id: 'g2',
       title: 'Yuki-chan Portrait',
-      imageUrl: _placeholderUrl, // ĐÃ SỬA
+      imageUrl: 'https://picsum.photos/seed/gallery2/300/400',
       artistId: '2',
       artistName: 'Sakura Yamamoto',
-      artistAvatar: _placeholderUrl, // ĐÃ SỬA
+      artistAvatar: 'https://i.pravatar.cc/150?img=5',
       mangaReference: '2',
       mangaTitle: 'Tình Yêu Tuổi 17',
       createdAt: DateTime.now().subtract(Duration(days: 1)),
@@ -348,10 +354,10 @@ class MockData {
     GalleryItem(
       id: 'g3',
       title: 'Ninja Cyber Action Scene',
-      imageUrl: _placeholderUrl, // ĐÃ SỬA
+      imageUrl: 'https://picsum.photos/seed/gallery3/300/400',
       artistId: '1',
       artistName: 'Akira Tanaka',
-      artistAvatar: _placeholderUrl, // ĐÃ SỬA
+      artistAvatar: 'https://i.pravatar.cc/150?img=1',
       mangaReference: '3',
       mangaTitle: 'Biên Niên Sử Ninja Mạng',
       createdAt: DateTime.now().subtract(Duration(days: 2)),
@@ -362,10 +368,10 @@ class MockData {
     GalleryItem(
       id: 'g4',
       title: 'Witch Academy Group',
-      imageUrl: _placeholderUrl, // ĐÃ SỬA
+      imageUrl: 'https://picsum.photos/seed/gallery4/300/400',
       artistId: '2',
       artistName: 'Sakura Yamamoto',
-      artistAvatar: _placeholderUrl, // ĐÃ SỬA
+      artistAvatar: 'https://i.pravatar.cc/150?img=5',
       mangaReference: '4',
       mangaTitle: 'Học Viện Nữ Phù Thủy',
       createdAt: DateTime.now().subtract(Duration(days: 3)),
@@ -379,7 +385,7 @@ class MockData {
     TranslationGroup(
       id: 'tg1',
       name: 'Lory Translation Team',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/group1/100/100',
       description: 'Nhóm dịch chuyên nghiệp với hơn 5 năm kinh nghiệm. Chuyên dịch manga, manhwa, manhua chất lượng cao.',
       members: 15,
       mangaCount: 45,
@@ -388,7 +394,7 @@ class MockData {
     TranslationGroup(
       id: 'tg2',
       name: 'Dragon Scans',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/group2/100/100',
       description: 'Nhóm dịch truyện hành động và phiêu lưu. Cập nhật nhanh, chất lượng tốt.',
       members: 8,
       mangaCount: 23,
@@ -397,7 +403,7 @@ class MockData {
     TranslationGroup(
       id: 'tg3',
       name: 'Romance Lovers',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/group3/100/100',
       description: 'Chuyên dịch truyện lãng mạn và slice of life. Đội ngũ dịch giả tâm huyết.',
       members: 12,
       mangaCount: 34,
@@ -409,7 +415,7 @@ class MockData {
     Community(
       id: 'cm1',
       name: 'Cộng Đồng Manga Việt',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/community1/400/200',
       description: 'Cộng đồng yêu thích manga lớn nhất Việt Nam. Nơi chia sẻ đam mê và thảo luận về các bộ manga yêu thích.',
       memberCount: 15420,
       isJoined: true,
@@ -419,7 +425,7 @@ class MockData {
     Community(
       id: 'cm2',
       name: 'Manhwa Lovers',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/community2/400/200',
       description: 'Dành cho những người yêu thích manhwa Hàn Quốc. Cập nhật nhanh nhất các bộ manhwa hot.',
       memberCount: 8930,
       isJoined: false,
@@ -429,7 +435,7 @@ class MockData {
     Community(
       id: 'cm3',
       name: 'Manhua Fan Club',
-      avatar: _placeholderUrl, // ĐÃ SỬA
+      avatar: 'https://picsum.photos/seed/community3/400/200',
       description: 'Cộng đồng manhua Trung Quốc. Thảo luận về tu tiên, huyền huyễn và nhiều thể loại khác.',
       memberCount: 6750,
       isJoined: true,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'dart:developer' as developer;
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -49,23 +50,100 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         Navigator.pushReplacementNamed(context, '/main');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Color(0xFFef4444),
-          ),
-        );
+        if (result['needsVerification'] == true) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: Color(0xFF1e293b),
+              title: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Color(0xFFf59e0b), size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Email chưa xác thực',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    result['message'],
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Bạn có muốn gửi lại email xác thực?',
+                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Hủy',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    setState(() {
+                      _isLoading = true;
+                    });
+                    
+                    final resendResult = await _authService.resendVerificationEmail(
+                      result['email'],
+                      _passwordController.text,
+                    );
+                    
+                    setState(() {
+                      _isLoading = false;
+                    });
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(resendResult['message']),
+                        backgroundColor: resendResult['success'] 
+                            ? Color(0xFF10b981) 
+                            : Color(0xFFef4444),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Gửi lại',
+                    style: TextStyle(color: Color(0xFF06b6d4), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Color(0xFFef4444),
+            ),
+          );
+        }
       }
     }
   }
 
   // Xử lý đăng nhập với Google
   void _handleGoogleLogin() async {
+    developer.log('[v0] Bắt đầu xử lý Google login', name: 'LoginScreen');
+    
     setState(() {
       _isLoading = true;
     });
 
     final result = await _authService.loginWithGoogle();
+    
+    developer.log('[v0] Kết quả Google login: ${result['success']} - ${result['message']}', name: 'LoginScreen');
 
     setState(() {
       _isLoading = false;
@@ -76,9 +154,20 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(
           content: Text(result['message']),
           backgroundColor: Color(0xFF10b981),
+          duration: Duration(seconds: 2),
         ),
       );
+      developer.log('[v0] Chuyển hướng đến /main', name: 'LoginScreen');
       Navigator.pushReplacementNamed(context, '/main');
+    } else {
+      developer.log('[v0] Đăng nhập thất bại: ${result['message']}', name: 'LoginScreen');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Color(0xFFef4444),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 

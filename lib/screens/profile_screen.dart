@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../data/mock_data.dart';
+import '../services/auth_service.dart';
 import 'admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -10,10 +11,35 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final User currentUser = MockData.users[0];
-  final bool isAdmin = true; // Trong thực tế, lấy từ auth service
+  final bool isAdmin = true;
   int currentExp = 2450;
   int maxExp = 5000;
-  String userLevel = 'Bạc'; // Đồng, Bạc, Vàng, Kim Cương
+  String userLevel = 'Bạc';
+  
+  final AuthService _authService = AuthService();
+  String? _userName;
+  String? _userPhotoUrl;
+  String? _userEmail;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final name = await _authService.getUserName();
+    final photoUrl = await _authService.getUserPhotoUrl();
+    final email = await _authService.getUserEmail();
+    
+    setState(() {
+      _userName = name;
+      _userPhotoUrl = photoUrl;
+      _userEmail = email;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +76,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: Color(0xFF06b6d4)))
+          : SingleChildScrollView(
         child: Column(
           children: [
             Container(
@@ -71,7 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: NetworkImage(currentUser.avatar),
+                        backgroundImage: _userPhotoUrl != null
+                            ? NetworkImage(_userPhotoUrl!)
+                            : NetworkImage(currentUser.avatar),
                       ),
                       Positioned(
                         bottom: 0,
@@ -93,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    currentUser.name,
+                    _userName ?? currentUser.name,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -102,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    currentUser.bio,
+                    _userEmail ?? currentUser.bio,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -368,6 +398,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: 80,
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Color(0xFF1e293b),
@@ -396,6 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontSize: 14,
                       color: Colors.white,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     subtitle,
@@ -403,6 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.white54,
                       fontSize: 12,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -550,47 +583,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isScrollControlled: true,
       builder: (context) {
         return Container(
-          padding: EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Cài Đặt',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          padding: EdgeInsets.only(
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Cài Đặt',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              SizedBox(height: 16),
-              ListTile(
-                leading: Icon(Icons.notifications, color: Colors.white),
-                title: Text('Thông báo', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.privacy_tip, color: Colors.white),
-                title: Text('Quyền riêng tư', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.help, color: Colors.white),
-                title: Text('Trợ giúp & Hỗ trợ', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.info, color: Colors.white),
-                title: Text('Về ứng dụng', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.logout, color: Colors.red),
-                title: Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
+                SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(Icons.notifications, color: Colors.white),
+                  title: Text('Thông báo', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: Icon(Icons.privacy_tip, color: Colors.white),
+                  title: Text('Quyền riêng tư', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: Icon(Icons.help, color: Colors.white),
+                  title: Text('Trợ giúp & Hỗ trợ', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: Icon(Icons.info, color: Colors.white),
+                  title: Text('Về ứng dụng', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: Icon(Icons.logout, color: Colors.red),
+                  title: Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _authService.logout();
+                    Navigator.pushReplacementNamed(context, '/login');
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },

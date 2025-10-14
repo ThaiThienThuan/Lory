@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'otp_verification_screen.dart';
 
 // Màn hình đăng ký tài khoản
 class RegisterScreen extends StatefulWidget {
@@ -43,20 +42,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Color(0xFF10b981),
-          ),
-        );
-        
-        // Chuyển sang màn hình xác thực OTP
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OTPVerificationScreen(
-              email: _emailController.text.trim(),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: Color(0xFF1e293b),
+            title: Row(
+              children: [
+                Icon(Icons.email, color: Color(0xFF06b6d4), size: 28),
+                SizedBox(width: 12),
+                Text(
+                  'Kiểm tra email',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  result['message'],
+                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF0f172a),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Color(0xFF06b6d4).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFF06b6d4), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sau khi xác thực, bạn có thể đăng nhập',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Go back to login
+                },
+                child: Text(
+                  'Đã hiểu',
+                  style: TextStyle(color: Color(0xFF06b6d4), fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         );
       } else {
