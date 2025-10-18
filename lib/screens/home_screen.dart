@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/manga.dart';
-import '../data/mock_data.dart';
-import 'upload_manga_screen.dart'; // Import UploadMangaScreen
+import '../services/firestore_service.dart';
+import 'upload_manga_screen.dart' as upload;
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,22 +13,27 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final PageController _bannerController = PageController(initialPage: 5000);
   final ScrollController _scrollController = ScrollController();
+  final FirestoreService _firestoreService = FirestoreService();
 
-  List<Manga> _filteredManga = MockData.mangaList;
+  List<Manga> _filteredManga = [];
+  List<Manga> _allManga = [];
+  List<Manga> _featuredManga = [];
+  List<Manga> _hotManga = [];
+  List<Manga> _recentManga = [];
   Timer? _bannerTimer;
   int _currentBannerPage = 0;
-  int _displayedMangaCount = 6; // Số lượng truyện hiển thị ban đầu
+  int _displayedMangaCount = 6;
+  bool _isLoading = true;
 
-  final bool isTranslationGroup = true; // Hoặc isAdmin = true
+  final bool isTranslationGroup = true;
   final bool isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    // Tự động chuyển banner mỗi 4 giây
     _startBannerAutoScroll();
-    // Lắng nghe scroll để lazy load
     _scrollController.addListener(_onScroll);
+    _loadMangaFromFirestore();
   }
 
   @override
@@ -40,11 +45,40 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Bắt đầu tự động cuộn banner
+  void _loadMangaFromFirestore() {
+    _firestoreService.getMangaStream().listen((mangaList) {
+      setState(() {
+        _allManga = mangaList;
+        _filteredManga = mangaList;
+        _isLoading = false;
+        
+        // Featured manga: lấy 6 manga có rating cao nhất
+        _featuredManga = List.from(mangaList)
+          ..sort((a, b) => b.rating.compareTo(a.rating))
+          ..take(6).toList();
+
+        // Recent manga: sắp xếp theo thời gian
+        _recentManga = List.from(mangaList)
+          ..sort((a, b) {
+            if (a.chapters.isEmpty) return 1;
+            if (b.chapters.isEmpty) return -1;
+            return b.chapters.first.releaseDate.compareTo(a.chapters.first.releaseDate);
+          })
+          ..take(10).toList();
+      });
+    });
+
+    // Load hot manga (manga có views cao nhất)
+    _firestoreService.getHotMangaStream(limit: 10).listen((hotList) {
+      setState(() {
+        _hotManga = hotList;
+      });
+    });
+  }
+
   void _startBannerAutoScroll() {
     _bannerTimer = Timer.periodic(Duration(seconds: 4), (timer) {
       if (_bannerController.hasClients) {
-        // Lấy trang hiện tại, sau đó cộng 1
         final nextPage = _bannerController.page!.toInt() + 1;
         _bannerController.animateToPage(
           nextPage,
@@ -55,11 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Xử lý lazy loading khi scroll
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      // Load thêm truyện khi gần cuối danh sách
       if (_displayedMangaCount < _filteredManga.length) {
         setState(() {
           _displayedMangaCount =
@@ -69,20 +101,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Lọc truyện theo từ khóa tìm kiếm
   void _filterManga(String query) {
     setState(() {
       if (query.isEmpty) {
-        _filteredManga = MockData.mangaList;
+        _filteredManga = _allManga;
       } else {
-        _filteredManga = MockData.mangaList
+        final lowerQuery = query.toLowerCase().trim();
+        _filteredManga = _allManga
             .where((manga) =>
-                manga.title.toLowerCase().contains(query.toLowerCase()) ||
+                manga.title.toLowerCase().contains(lowerQuery) ||
+                manga.author.toLowerCase().contains(lowerQuery) ||
                 manga.genres.any((genre) =>
-                    genre.toLowerCase().contains(query.toLowerCase())))
+                    genre.toLowerCase().contains(lowerQuery)))
             .toList();
       }
-      _displayedMangaCount = 6; // Reset số lượng hiển thị khi tìm kiếm
+      _displayedMangaCount = 6;
+      print('[v0] Search query: "$query", Results: ${_filteredManga.length}');
     });
   }
 
@@ -111,262 +145,318 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _filterManga,
-                style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm truyện tranh...',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  prefixIcon: Icon(Icons.search, color: Color(0xFF06b6d4)),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, color: Colors.white54),
-                          onPressed: () {
-                            _searchController.clear();
-                            _filterManga('');
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Color(0xFF1e293b),
-                ),
-              ),
-            ),
-            Container(
-              height: 180,
-              child: PageView.builder(
-                controller: _bannerController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentBannerPage = index;
-                  });
-                },
-                itemCount: MockData.featuredManga.isEmpty ? 0 : 10000,
-                itemBuilder: (context, pageIndex) {
-                  final actualItemCount =
-                      MockData.featuredManga.length; // Giả sử là 4 item
-                  if (actualItemCount == 0) return SizedBox.shrink();
-
-                  // Tính chỉ mục bắt đầu thực tế của dữ liệu (0, 2, 0, 2, ...)
-                  final baseIndex = (pageIndex * 2) % actualItemCount;
-
-                  // Lấy 2 item từ danh sách thực tế, sử dụng phép toán modulo để lặp lại
-                  final manga1 = MockData.featuredManga[baseIndex];
-                  final manga2 =
-                      MockData.featuredManga[(baseIndex + 1) % actualItemCount];
-
-                  final mangasInPage = [
-                    manga1,
-                    manga2
-                  ]; // Danh sách 2 item cho trang hiện tại
-
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: mangasInPage.map((manga) {
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/detail',
-                                arguments: manga,
-                              );
-                            },
-                            child: Container(
-                              margin: EdgeInsets.only(
-                                  right: mangasInPage.last == manga ? 0 : 8),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFF06b6d4).withOpacity(0.3),
-                                    Color(0xFFec4899).withOpacity(0.3),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      manga.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.black.withOpacity(0.8),
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 12,
-                                    left: 12,
-                                    right: 12,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          manga.title,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.star,
-                                                color: Color(0xFFfbbf24),
-                                                size: 12),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              manga.rating.toString(),
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                (MockData.featuredManga.length / 2).ceil(),
-                (index) => Container(
-                  margin: EdgeInsets.symmetric(horizontal: 4),
-                  width: _currentBannerPage == index ? 24 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _currentBannerPage == index
-                        ? Color(0xFF06b6d4)
-                        : Colors.white24,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 24),
-            _buildMangaSection(
-              title: 'Truyện Hot',
-              icon: Icons.local_fire_department,
-              iconColor: Color(0xFFef4444),
-              mangaList: MockData.hotManga.take(6).toList(),
-            ),
-            SizedBox(height: 24),
-            _buildMangaSection(
-              title: 'Mới Cập Nhật',
-              icon: Icons.update,
-              iconColor: Color(0xFF10b981),
-              mangaList: MockData.recentlyUpdatedManga.take(6).toList(),
-            ),
-            SizedBox(height: 24),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+      body: _isLoading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.library_books, color: Color(0xFF06b6d4), size: 24),
-                  SizedBox(width: 8),
-                  Text(
-                    'Toàn Bộ Truyện',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
                   ),
-                  Spacer(),
+                  SizedBox(height: 16),
                   Text(
-                    '${_filteredManga.length} truyện',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white54,
-                    ),
+                    'Đang tải dữ liệu từ Firebase...',
+                    style: TextStyle(color: Colors.white70),
                   ),
                 ],
               ),
-            ),
-            SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.65,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: _displayedMangaCount.clamp(0, _filteredManga.length),
-              itemBuilder: (context, index) {
-                final manga = _filteredManga[index];
-                return _buildMangaCard(manga);
-              },
-            ),
-            if (_displayedMangaCount < _filteredManga.length)
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+            )
+          : SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _filterManga,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm kiếm truyện tranh...',
+                        hintStyle: TextStyle(color: Colors.white38),
+                        prefixIcon: Icon(Icons.search, color: Color(0xFF06b6d4)),
+                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _searchController,
+                          builder: (context, value, child) {
+                            return value.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear, color: Colors.white54),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _filterManga('');
+                                    },
+                                  )
+                                : SizedBox.shrink();
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFF1e293b),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_featuredManga.isNotEmpty) ...[
+                    Container(
+                      height: 180,
+                      child: PageView.builder(
+                        controller: _bannerController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentBannerPage = index;
+                          });
+                        },
+                        itemCount: _featuredManga.isEmpty ? 0 : 10000,
+                        itemBuilder: (context, pageIndex) {
+                          final actualItemCount = _featuredManga.length;
+                          if (actualItemCount == 0) return SizedBox.shrink();
+
+                          final baseIndex = (pageIndex * 2) % actualItemCount;
+                          final manga1 = _featuredManga[baseIndex];
+                          final manga2 = _featuredManga[(baseIndex + 1) % actualItemCount];
+
+                          final mangasInPage = [manga1, manga2];
+
+                          return Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: mangasInPage.map((manga) {
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/detail',
+                                        arguments: manga,
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: EdgeInsets.only(right: mangasInPage.last == manga ? 0 : 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Color(0xFF06b6d4).withOpacity(0.3),
+                                            Color(0xFFec4899).withOpacity(0.3),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.network(
+                                              manga.coverImage,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  color: Color(0xFF1e293b),
+                                                  child: Icon(
+                                                    Icons.image_outlined,
+                                                    size: 48,
+                                                    color: Color(0xFF06b6d4).withOpacity(0.5),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.black.withOpacity(0.8),
+                                                ],
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            bottom: 12,
+                                            left: 12,
+                                            right: 12,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  manga.title,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Icon(Icons.star,
+                                                        color: Color(0xFFfbbf24),
+                                                        size: 12),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      manga.rating.toString(),
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        (_featuredManga.length / 2).ceil(),
+                        (index) => Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4),
+                          width: _currentBannerPage == index ? 24 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _currentBannerPage == index
+                                ? Color(0xFF06b6d4)
+                                : Colors.white24,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                  ],
+                  if (_hotManga.isNotEmpty)
+                    _buildMangaSection(
+                      title: 'Truyện Hot',
+                      icon: Icons.local_fire_department,
+                      iconColor: Color(0xFFef4444),
+                      mangaList: _hotManga.take(6).toList(),
+                    ),
+                  SizedBox(height: 24),
+                  if (_recentManga.isNotEmpty)
+                    _buildMangaSection(
+                      title: 'Mới Cập Nhật',
+                      icon: Icons.update,
+                      iconColor: Color(0xFF10b981),
+                      mangaList: _recentManga.take(6).toList(),
+                    ),
+                  SizedBox(height: 24),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Icon(Icons.library_books, color: Color(0xFF06b6d4), size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'Toàn Bộ Truyện',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Spacer(),
+                        Text(
+                          '${_filteredManga.length} truyện',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  _allManga.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.library_books_outlined,
+                                  size: 64,
+                                  color: Color(0xFF06b6d4).withOpacity(0.5),
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Chưa có truyện nào',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Hãy thêm truyện mới bằng nút + bên dưới',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.65,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: _displayedMangaCount.clamp(0, _filteredManga.length),
+                          itemBuilder: (context, index) {
+                            final manga = _filteredManga[index];
+                            return _buildMangaCard(manga);
+                          },
+                        ),
+                  if (_displayedMangaCount < _filteredManga.length)
+                    Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: 20),
+                ],
               ),
-            SizedBox(height: 20),
-          ],
-        ),
-      ),
+            ),
       floatingActionButton: (isTranslationGroup || isAdmin)
           ? FloatingActionButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => UploadMangaScreen(),
+                    builder: (context) => upload.UploadMangaScreen(),
                   ),
                 );
               },
@@ -377,7 +467,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget xây dựng section truyện ngang
   Widget _buildMangaSection({
     required String title,
     required IconData icon,
@@ -425,7 +514,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget card truyện
   Widget _buildMangaCard(Manga manga) {
     return GestureDetector(
       onTap: () {
@@ -458,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       top: Radius.circular(12),
                     ),
                     child: Image.network(
-                      manga.cover,
+                      manga.coverImage,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
@@ -497,14 +585,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-                  // Badge trạng thái
                   if (manga.chapters.isNotEmpty)
                     Positioned(
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Color(0xFF06b6d4),
                           borderRadius: BorderRadius.circular(8),
@@ -574,10 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     spacing: 4,
                     children: manga.genres.take(2).map((genre) {
                       return Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Color(0xFFec4899).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(6),

@@ -53,7 +53,7 @@ class MockData {
     Manga(
       id: '1',
       title: 'Di Sản Rồng Thiêng',
-      cover: 'https://picsum.photos/seed/manga1/200/300',
+      coverImage: 'https://picsum.photos/seed/manga1/200/300',
       description: 'Một chiến binh trẻ khám phá ra mối liên hệ của mình với những con rồng cổ đại và phải cứu thế giới khỏi một phù thủy tà ác đang đe dọa phá hủy mọi thứ anh ta yêu quý.',
       genres: ['Action', 'Fantasy', 'Adventure', 'Manga'],
       rating: 4.8,
@@ -128,7 +128,7 @@ class MockData {
     Manga(
       id: '2',
       title: 'Tình Yêu Tuổi 17',
-      cover: 'https://picsum.photos/seed/manga2/200/300',
+      coverImage: 'https://picsum.photos/seed/manga2/200/300',
       description: 'Một câu chuyện ấm áp về tình yêu tuổi teen, tình bạn và trưởng thành ở Tokyo hiện đại. Theo chân Yuki và những người bạn qua năm cuối cấp ba.',
       genres: ['Romance', 'Slice of Life', 'Comedy', 'Manga'],
       rating: 4.6,
@@ -163,7 +163,7 @@ class MockData {
     Manga(
       id: '3',
       title: 'Biên Niên Sử Ninja Mạng',
-      cover: 'https://picsum.photos/seed/manga3/200/300',
+      coverImage: 'https://picsum.photos/seed/manga3/200/300',
       description: 'Trong một tương lai dystopia nơi công nghệ và võ thuật cổ đại va chạm, một ninja trẻ phải điều hướng thế giới ngầm kỹ thuật số để khám phá một âm mưu.',
       genres: ['Action', 'Sci-Fi', 'Thriller', 'Manga'],
       rating: 4.7,
@@ -189,7 +189,7 @@ class MockData {
     Manga(
       id: '4',
       title: 'Học Viện Nữ Phù Thủy',
-      cover: 'https://picsum.photos/seed/manga4/200/300',
+      coverImage: 'https://picsum.photos/seed/manga4/200/300',
       description: 'Những cô gái trẻ với sức mạnh phép thuật theo học tại một học viện đặc biệt để học cách bảo vệ thế giới khỏi các thế lực đen tối trong khi đối phó với những vấn đề tuổi teen thông thường.',
       genres: ['Magic', 'Comedy', 'Friendship', 'Manhwa'],
       rating: 4.4,
@@ -215,7 +215,7 @@ class MockData {
     Manga(
       id: '5',
       title: 'Võ Thần Truyền Kỳ',
-      cover: 'https://picsum.photos/seed/manga5/200/300',
+      coverImage: 'https://picsum.photos/seed/manga5/200/300',
       description: 'Hành trình tu luyện của một thiếu niên từ kẻ yếu đuối trở thành võ thần tối cao, chinh phục các đỉnh cao võ học và bảo vệ người thân.',
       genres: ['Action', 'Martial Arts', 'Adventure', 'Manhua'],
       rating: 4.9,
@@ -241,7 +241,7 @@ class MockData {
     Manga(
       id: '6',
       title: 'Thám Tử Thành Phố',
-      cover: 'https://picsum.photos/seed/manga6/200/300',
+      coverImage: 'https://picsum.photos/seed/manga6/200/300',
       description: 'Một thám tử tài ba giải quyết những vụ án bí ẩn nhất thành phố với trí thông minh phi thường và khả năng quan sát tuyệt vời.',
       genres: ['Mystery', 'Thriller', 'Drama', 'Manga'],
       rating: 4.5,

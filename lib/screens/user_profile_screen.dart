@@ -216,7 +216,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     final manga = mockMangaList[index % mockMangaList.length];
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(manga.cover, fit: BoxFit.cover),
+                      child: Image.network(manga.coverImage, fit: BoxFit.cover),
                     );
                   },
                   childCount: 6,

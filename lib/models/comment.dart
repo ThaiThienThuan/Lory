@@ -19,4 +19,30 @@ class Comment {
     this.likes = 0,
     this.isLiked = false,
   });
+
+  factory Comment.fromJson(Map<String, dynamic> json) {
+    return Comment(
+      id: json['id'] as String,
+      userId: json['userId'] as String,
+      userName: json['userName'] as String,
+      userAvatar: json['userAvatar'] as String,
+      content: json['content'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      likes: json['likes'] as int? ?? 0,
+      isLiked: json['isLiked'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'userName': userName,
+      'userAvatar': userAvatar,
+      'content': content,
+      'createdAt': createdAt.toIso8601String(),
+      'likes': likes,
+      'isLiked': isLiked,
+    };
+  }
 }

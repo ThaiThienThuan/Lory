@@ -14,22 +14,6 @@
       },
       "oauth_client": [
         {
-          "client_id": "382449873301-2bcpsbt7lkduf1048fqma6pj4n8ibiuk.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.truyentranh",
-            "certificate_hash": "98f40f71dd9c96ae5e1c756fa4a451f1304c9639"
-          }
-        },
-        {
-          "client_id": "382449873301-mjrfgtoa9e2sl9uqo2fpvc56tk08intl.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.truyentranh",
-            "certificate_hash": "c8ef33b4b8dd26ab3b2c54b98c08adaba5dcf273"
-          }
-        },
-        {
           "client_id": "382449873301-rqd6ohmmor0lf5ri0jnaeeef5v8329iq.apps.googleusercontent.com",
           "client_type": 3
         }

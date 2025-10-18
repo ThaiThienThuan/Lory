@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/manga.dart';
 import '../models/comment.dart';
+//import 'add_chapter_screen.dart'; // Changed to relative import to match other imports in the file
+import '../services/auth_service.dart';
+import 'add_chapter_screen'; // Import AuthService
+
 class DetailScreen extends StatefulWidget {
+  const DetailScreen({Key? key}) : super(key: key); // Added key parameter to fix constructor warning
+  
   @override
-  _DetailScreenState createState() => _DetailScreenState();
+  State<DetailScreen> createState() => _DetailScreenState(); // Fixed return type to use proper state class
 }
 
 class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderStateMixin {
@@ -11,11 +17,26 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   bool isLiked = false;
   double userRating = 0;
   late TabController _tabController;
+  
+  final bool isTranslationGroup = true;
+  final bool isAdmin = false;
+  String? _currentUserId;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final authService = AuthService();
+    final userId = await authService.getUserId();
+    setState(() {
+      _currentUserId = userId;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -35,6 +56,11 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
       });
     }
 
+    final bool isUploader = !_isLoading && 
+                           _currentUserId != null && 
+                           manga.uploaderId != null && 
+                           _currentUserId == manga.uploaderId;
+
     return Scaffold(
       backgroundColor: Color(0xFF0f172a),
       body: CustomScrollView(
@@ -48,7 +74,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    manga.cover,
+                    manga.coverImage,
                     fit: BoxFit.cover,
                   ),
                   Container(
@@ -156,7 +182,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                         flex: 2,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            // Tìm chương đã đọc gần nhất hoặc chương đầu
                             final lastReadChapter = manga.chapters.firstWhere(
                               (c) => c.isRead,
                               orElse: () => manga.chapters.first,
@@ -374,10 +399,30 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
           ),
         ],
       ),
+      floatingActionButton: isUploader
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AddChapterScreen(
+                      mangaId: manga.id,
+                      mangaTitle: manga.title,
+                    ),
+                  ),
+                );
+              },
+              backgroundColor: Color(0xFF06b6d4),
+              icon: Icon(Icons.add, color: Colors.white),
+              label: Text(
+                'Thêm chương',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
     );
   }
 
-  // Widget thống kê
   Widget _buildStatItem(IconData icon, String value, String label) {
     return Row(
       children: [
@@ -407,7 +452,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  // Danh sách chương
   Widget _buildChapterList(Manga manga) {
     return ListView.builder(
       shrinkWrap: true,
@@ -472,11 +516,9 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  // Danh sách bình luận
   Widget _buildCommentList(Manga manga) {
     return Column(
       children: [
-        // Nút thêm bình luận
         Container(
           margin: EdgeInsets.only(bottom: 16),
           child: ElevatedButton.icon(
@@ -494,7 +536,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
             ),
           ),
         ),
-        // Danh sách bình luận
         Expanded(
           child: manga.comments.isEmpty
               ? Center(
@@ -515,7 +556,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  // Widget bình luận
   Widget _buildCommentItem(Comment comment) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -592,7 +632,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  // Dialog thêm bình luận
   void _showAddCommentDialog() {
     final commentController = TextEditingController();
     showDialog(
@@ -640,7 +679,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  // Format thời gian
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);

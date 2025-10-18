@@ -235,7 +235,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  manga.cover,
+                  manga.coverImage,
                   width: 60,
                   height: 80,
                   fit: BoxFit.cover,
