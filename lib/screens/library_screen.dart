@@ -1,99 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/manga.dart';
 import '../models/gallery.dart';
-import '../data/mock_data.dart';
-import 'upload_gallery_screen.dart'; // Import UploadGalleryScreen
+import '../models/post.dart';
 import '../models/translation_group.dart';
+import '../services/firestore_service.dart';
+
 class LibraryScreen extends StatefulWidget {
   @override
   _LibraryScreenState createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends State<LibraryScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   List<Manga> followedManga = [];
+  List<Manga> likedManga = [];
   List<GalleryItem> galleryItems = [];
   List<TranslationGroup> followedGroups = [];
+  List<Post> fanartPosts = [];
+  final FirestoreService _firestoreService = FirestoreService();
+  String? _currentUserId;
 
-  final bool isTranslationGroup = true; // Hoặc isAdmin = true
+  final bool isTranslationGroup = true;
   final bool isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+    WidgetsBinding.instance.addObserver(this);
+    _getCurrentUser();
     _loadLibraryData();
   }
 
-  void _loadLibraryData() {
-    followedManga = MockData.mangaList.where((manga) => manga.isFollowed).toList();
-    galleryItems = MockData.galleryItems;
-    followedGroups = MockData.translationGroups.where((g) => g.isFollowing).toList();
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadLibraryData();
+      setState(() {});
+    }
+  }
+
+  void _getCurrentUser() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _currentUserId = user.uid;
+    }
+  }
+
+  void _loadLibraryData() async {
+    if (_currentUserId == null) {
+      return;
+    }
+
+    try {
+      // Lấy danh sách ID manga yêu thích từ Firestore
+      final likedMangaIds =
+          await _firestoreService.getUserLikedManga(_currentUserId!);
+
+      // Lấy thông tin chi tiết của các manga yêu thích
+      List<Manga> likedMangaList = [];
+      for (String mangaId in likedMangaIds) {
+        final manga = await _firestoreService.getMangaById(mangaId);
+        if (manga != null) {
+          likedMangaList.add(manga);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          likedManga = likedMangaList;
+        });
+      }
+    } catch (e) {
+      print('Lỗi khi tải danh sách yêu thích: $e');
+    }
+
+    try {
+      final posts = await _firestoreService.getFanartPosts();
+      if (mounted) {
+        setState(() {
+          fanartPosts = posts; // Lưu trực tiếp danh sách Post
+        });
+      }
+    } catch (e) {
+      print('Lỗi khi tải fanart posts: $e');
+      if (mounted) {
+        setState(() {
+          fanartPosts = [];
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
-        backgroundColor: Color(0xFF1e293b),
         title: Text(
           'Thư Viện',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).appBarTheme.foregroundColor,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: Colors.white),
+            icon: Icon(
+              Icons.search,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () {},
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Color(0xFF06b6d4),
-          unselectedLabelColor: Colors.white54,
+          unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
           indicatorColor: Color(0xFF06b6d4),
           tabs: [
-            Tab(text: 'Theo dõi'),
+            Tab(text: 'Yêu thích'),
             Tab(text: 'Gallery'),
-            Tab(text: 'Nhóm'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildFollowingTab(),
+          _buildLikedTab(),
           _buildGalleryTab(),
-          _buildGroupsTab(),
         ],
       ),
-      floatingActionButton: (isTranslationGroup || isAdmin) && _tabController.index == 1
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UploadGalleryScreen(),
-                  ),
-                );
-              },
-              backgroundColor: Colors.pink,
-              child: Icon(Icons.add_photo_alternate, color: Colors.white),
-            )
-          : null,
     );
   }
 
-  Widget _buildFollowingTab() {
-    if (followedManga.isEmpty) {
+  Widget _buildLikedTab() {
+    if (likedManga.isEmpty) {
       return _buildEmptyState(
-        icon: Icons.bookmark_outline,
-        title: 'Chưa theo dõi truyện nào',
-        subtitle: 'Bắt đầu theo dõi truyện để xem ở đây',
+        icon: Icons.favorite_outline,
+        title: 'Chưa yêu thích truyện nào',
+        subtitle: 'Nhấn nút trái tim để thêm truyện vào danh sách yêu thích',
         actionText: 'Khám phá truyện',
         onAction: () {},
       );
@@ -101,61 +160,49 @@ class _LibraryScreenState extends State<LibraryScreen>
 
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount: followedManga.length,
+      itemCount: likedManga.length,
       itemBuilder: (context, index) {
-        final manga = followedManga[index];
+        final manga = likedManga[index];
         return _buildMangaListItem(manga);
       },
     );
   }
-
   Widget _buildGalleryTab() {
-    if (galleryItems.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.photo_library_outlined,
-        title: 'Chưa có fanart nào',
-        subtitle: 'Fanart từ cộng đồng sẽ xuất hiện ở đây',
-        actionText: 'Khám phá',
-        onAction: () {},
-      );
-    }
-
-    return GridView.builder(
-      padding: EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: galleryItems.length,
-      itemBuilder: (context, index) {
-        final item = galleryItems[index];
-        return _buildGalleryItem(item);
-      },
+  if (fanartPosts.isEmpty) {
+    return const Center(
+      child: Text('Chưa có fanart nào 🖌️'),
     );
   }
 
-  Widget _buildGroupsTab() {
-    if (followedGroups.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.group_outlined,
-        title: 'Chưa theo dõi nhóm nào',
-        subtitle: 'Theo dõi nhóm dịch để nhận cập nhật mới nhất',
-        actionText: 'Tìm nhóm',
-        onAction: () {},
-      );
-    }
+  return GridView.builder(
+    padding: const EdgeInsets.all(8),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 0.8,
+    ),
+    itemCount: fanartPosts.length,
+    itemBuilder: (context, index) {
+      final post = fanartPosts[index];
+      if (post.images.isEmpty) return const SizedBox();
 
-    return ListView.builder(
-      padding: EdgeInsets.all(16),
-      itemCount: followedGroups.length,
-      itemBuilder: (context, index) {
-        final group = followedGroups[index];
-        return _buildGroupItem(group);
-      },
-    );
-  }
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          post.images.first,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.broken_image, color: Colors.grey),
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildEmptyState({
     required IconData icon,
@@ -164,6 +211,8 @@ class _LibraryScreenState extends State<LibraryScreen>
     required String actionText,
     required VoidCallback onAction,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32),
@@ -173,7 +222,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             Icon(
               icon,
               size: 80,
-              color: Colors.white24,
+              color: isDark ? Colors.white24 : Colors.black26,
             ),
             SizedBox(height: 16),
             Text(
@@ -181,7 +230,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white54,
+                color: Theme.of(context).textTheme.titleLarge?.color,
               ),
             ),
             SizedBox(height: 8),
@@ -189,7 +238,11 @@ class _LibraryScreenState extends State<LibraryScreen>
               subtitle,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white38,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.color
+                    ?.withAlpha(179),
               ),
               textAlign: TextAlign.center,
             ),
@@ -198,7 +251,8 @@ class _LibraryScreenState extends State<LibraryScreen>
               onPressed: onAction,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF06b6d4),
-                foregroundColor: Colors.white,
+                foregroundColor:
+                    Colors.white, // ✅ Button text luôn trắng trên nền cyan
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -216,7 +270,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Color(0xFF1e293b),
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
@@ -251,7 +305,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.white,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -260,7 +314,11 @@ class _LibraryScreenState extends State<LibraryScreen>
                     Text(
                       manga.author,
                       style: TextStyle(
-                        color: Colors.white54,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.color
+                            ?.withAlpha(179),
                         fontSize: 14,
                       ),
                     ),
@@ -279,19 +337,21 @@ class _LibraryScreenState extends State<LibraryScreen>
                         Icon(Icons.star, size: 14, color: Color(0xFFfbbf24)),
                         SizedBox(width: 4),
                         Text(
-                          manga.rating.toString(),
+                          manga.rating.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.white70,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                         ),
                         SizedBox(width: 12),
                         ...manga.genres.take(2).map((genre) {
                           return Container(
                             margin: EdgeInsets.only(right: 4),
-                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Color(0xFFec4899).withOpacity(0.2),
+                              color: Color(0xFFec4899).withAlpha(51),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -310,7 +370,8 @@ class _LibraryScreenState extends State<LibraryScreen>
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.more_vert, color: Colors.white),
+                icon: Icon(Icons.more_vert,
+                    color: Theme.of(context).textTheme.bodyLarge?.color),
                 onPressed: () {
                   _showMangaOptions(context, manga);
                 },
@@ -323,17 +384,19 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 
   Widget _buildGalleryItem(GalleryItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         _showGalleryDetail(item);
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Color(0xFF1e293b),
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withAlpha(77),
               blurRadius: 8,
               offset: Offset(0, 2),
             ),
@@ -346,7 +409,8 @@ class _LibraryScreenState extends State<LibraryScreen>
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(12)),
                     child: Image.network(
                       item.imageUrl,
                       width: double.infinity,
@@ -359,12 +423,15 @@ class _LibraryScreenState extends State<LibraryScreen>
                     child: Container(
                       padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withAlpha(153),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         item.isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: item.isLiked ? Color(0xFFec4899) : Colors.white,
+                        color: item.isLiked
+                            ? Color(0xFFec4899)
+                            : Colors
+                                .white, // ✅ Icon trên ảnh luôn trắng vì nền tối
                         size: 16,
                       ),
                     ),
@@ -382,7 +449,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -400,7 +467,11 @@ class _LibraryScreenState extends State<LibraryScreen>
                           item.artistName,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.white54,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.color
+                                ?.withAlpha(179),  
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -415,14 +486,24 @@ class _LibraryScreenState extends State<LibraryScreen>
                       SizedBox(width: 4),
                       Text(
                         '${item.likes}',
-                        style: TextStyle(fontSize: 11, color: Colors.white70),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color),
                       ),
                       SizedBox(width: 8),
-                      Icon(Icons.visibility, size: 12, color: Colors.white54),
+                      Icon(Icons.visibility,
+                          size: 12,
+                          color: isDark
+                              ? Colors.white54
+                              : Colors.black54),  
                       SizedBox(width: 4),
                       Text(
                         '${item.views}',
-                        style: TextStyle(fontSize: 11, color: Colors.white70),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color),
                       ),
                     ],
                   ),
@@ -439,7 +520,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Color(0xFF1e293b),
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -465,14 +546,18 @@ class _LibraryScreenState extends State<LibraryScreen>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                   SizedBox(height: 4),
                   Text(
                     group.description,
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color
+                          ?.withAlpha(179),  
                       fontSize: 13,
                     ),
                     maxLines: 2,
@@ -485,14 +570,20 @@ class _LibraryScreenState extends State<LibraryScreen>
                       SizedBox(width: 4),
                       Text(
                         '${group.members} thành viên',
-                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
                       ),
                       SizedBox(width: 12),
                       Icon(Icons.book, size: 14, color: Color(0xFFec4899)),
                       SizedBox(width: 4),
                       Text(
                         '${group.mangaCount} truyện',
-                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color),
                       ),
                     ],
                   ),
@@ -510,7 +601,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF06b6d4),
-                foregroundColor: Colors.white,
+                foregroundColor: Colors.white, // ✅ Button text luôn trắng
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -529,7 +620,8 @@ class _LibraryScreenState extends State<LibraryScreen>
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: Color(0xFF1e293b),
+          backgroundColor:
+              Theme.of(context).dialogTheme.backgroundColor, // ✅ Đã đúng
           child: Container(
             padding: EdgeInsets.all(16),
             child: Column(
@@ -550,7 +642,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -563,7 +655,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                     SizedBox(width: 8),
                     Text(
                       item.artistName,
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -582,7 +676,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                   children: item.tags.map((tag) {
                     return Chip(
                       label: Text(tag, style: TextStyle(fontSize: 12)),
-                      backgroundColor: Color(0xFF06b6d4).withOpacity(0.2),
+                      backgroundColor: Color(0xFF06b6d4).withAlpha(51),
                       labelStyle: TextStyle(color: Color(0xFF06b6d4)),
                     );
                   }).toList(),
@@ -594,17 +688,32 @@ class _LibraryScreenState extends State<LibraryScreen>
                     TextButton.icon(
                       onPressed: () {},
                       icon: Icon(Icons.favorite, color: Color(0xFFec4899)),
-                      label: Text('${item.likes}', style: TextStyle(color: Colors.white)),
+                      label: Text('${item.likes}',
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.color)),
                     ),
                     TextButton.icon(
                       onPressed: () {},
-                      icon: Icon(Icons.comment, color: Colors.white),
-                      label: Text('Bình luận', style: TextStyle(color: Colors.white)),
+                      icon: Icon(Icons.comment,
+                          color: Theme.of(context).textTheme.bodyLarge?.color),
+                      label: Text('Bình luận',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          )),
                     ),
                     TextButton.icon(
                       onPressed: () {},
-                      icon: Icon(Icons.share, color: Colors.white),
-                      label: Text('Chia sẻ', style: TextStyle(color: Colors.white)),
+                      icon: Icon(Icons.share,
+                          color: Theme.of(context).textTheme.bodyLarge?.color),
+                      label: Text('Chia sẻ',
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.color)),
                     ),
                   ],
                 ),
@@ -619,7 +728,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   void _showMangaOptions(BuildContext context, Manga manga) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Color(0xFF1e293b),
+      backgroundColor: Theme.of(context).bottomSheetTheme.backgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -630,18 +739,48 @@ class _LibraryScreenState extends State<LibraryScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.bookmark_remove, color: Colors.white),
-                title: Text('Bỏ theo dõi', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.favorite_border,
+                    color: Theme.of(context).textTheme.bodyLarge?.color),
+                title: Text('Bỏ yêu thích',
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () async {
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  Navigator.pop(context);
+
+                  // Gọi toggleMangaLike để xóa yêu thích
+                  if (_currentUserId != null) {
+                    await _firestoreService.toggleMangaLike(
+                        _currentUserId!, manga.id, false);
+
+                    // Cập nhật state để xóa manga khỏi danh sách
+                    if (mounted) {
+                      setState(() {
+                        likedManga.removeWhere((m) => m.id == manga.id);
+                      });
+                    }
+
+                    // Hiển thị thông báo sử dụng reference đã lưu
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('Đã bỏ yêu thích ${manga.title}')),
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.download,
+                    color: Theme.of(context).textTheme.bodyLarge?.color),
+                title: Text('Tải xuống',
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: Icon(Icons.download, color: Colors.white),
-                title: Text('Tải xuống', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.share, color: Colors.white),
-                title: Text('Chia sẻ', style: TextStyle(color: Colors.white)),
+                leading: Icon(Icons.share,
+                    color: Theme.of(context).textTheme.bodyLarge?.color),
+                title: Text('Chia sẻ',
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
                 onTap: () => Navigator.pop(context),
               ),
             ],
@@ -649,11 +788,5 @@ class _LibraryScreenState extends State<LibraryScreen>
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 }

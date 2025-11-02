@@ -125,6 +125,26 @@ class Manga {
       uploaderId: uploaderId ?? this.uploaderId,
     );
   }
+
+  factory Manga.empty() {
+    return Manga(
+      id: '',
+      title: 'Không có tiêu đề',
+      coverImage: '',
+      description: 'Không có mô tả',
+      genres: [],
+      rating: 0,
+      views: 0,
+      author: 'Không rõ tác giả',
+      status: 'Đang ra',
+      chapters: [],
+      isFollowed: false,
+      isLiked: false,
+      totalRatings: 0,
+      comments: [],
+      uploaderId: null,
+    );
+  }
 }
 
 class Chapter {

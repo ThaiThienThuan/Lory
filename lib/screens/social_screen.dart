@@ -1,383 +1,543 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:lory/screens/notification_screen.dart';
+import 'package:lory/screens/user_profile_screen.dart';
+import 'package:lory/screens/widgets/search_and_filter_widget.dart';
+import 'package:lory/screens/widgets/post_card_widget.dart';
+import 'package:lory/screens/widgets/comment_section_widget.dart';
+import 'package:lory/services/notification_service.dart';
+import 'package:lory/screens/messaging_screen.dart';
+import '../models/notification.dart' as notif_model;
+import '../services/cloudinary_service.dart';
+import '../services/firestore_service.dart';
 import '../models/post.dart';
-import '../data/mock_data.dart';
-import 'user_profile_screen.dart';
-import 'messaging_screen.dart';
-import 'community_detail_screen.dart';
+import '../models/comment.dart';
+import '../models/user.dart';
+import '../utils/time_utils.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SocialScreen extends StatefulWidget {
   @override
   _SocialScreenState createState() => _SocialScreenState();
 }
 
-class _SocialScreenState extends State<SocialScreen> {
-  List<Post> posts = MockData.posts;
+class _SocialScreenState extends State<SocialScreen>
+    with SingleTickerProviderStateMixin {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+
+  late TabController _tabController;
+  String _sortBy = 'latest';
+
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedTag = '';
+  final List<String> _suggestedTags = [
+    'thảo_luận',
+    'gợi_ý_truyện',
+    'spoiler',
+    'tin_nhóm_dịch',
+    'meme',
+    'fanart',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
-        backgroundColor: Color(0xFF1e293b),
         title: Text(
           'Cộng Đồng',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).appBarTheme.foregroundColor,
           ),
         ),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.person_outline, color: Colors.cyan),
-            tooltip: 'Tường cá nhân',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserProfileScreen(user: MockData.users[0]),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.message_outlined, color: Colors.cyan),
-            tooltip: 'Tin nhắn',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MessagingScreen(),
-                ),
+          StreamBuilder<int>(
+            stream: NotificationService()
+                .unreadCountStream(_auth.currentUser?.uid ?? ''),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.notifications_outlined,
+                        color: Color(0xFF06b6d4)),
+                    onPressed: () => _showNotificationScreen(),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: Colors.white),
-            color: Color(0xFF1e293b),
+            icon: Icon(Icons.sort, color: Color(0xFF06b6d4)),
             onSelected: (value) {
-              if (value == 'settings') {
-                // Điều hướng đến cài đặt
-              } else if (value == 'create_group') {
-                _showCreateGroupDialog(context);
-              } else if (value == 'my_groups') {
-                // Hiển thị danh sách nhóm của tôi
-              }
+              setState(() {
+                _sortBy = value;
+              });
             },
             itemBuilder: (context) => [
               PopupMenuItem(
-                value: 'create_group',
+                value: 'latest',
                 child: Row(
                   children: [
-                    Icon(Icons.group_add, color: Colors.cyan),
+                    Icon(Icons.access_time, color: Color(0xFF06b6d4)),
                     SizedBox(width: 12),
-                    Text('Tạo nhóm/cộng đồng', style: TextStyle(color: Colors.white)),
+                    Text('Mới nhất'),
                   ],
                 ),
               ),
               PopupMenuItem(
-                value: 'my_groups',
+                value: 'popular',
                 child: Row(
                   children: [
-                    Icon(Icons.groups, color: Colors.cyan),
+                    Icon(Icons.trending_up, color: Color(0xFFec4899)),
                     SizedBox(width: 12),
-                    Text('Nhóm của tôi', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings, color: Colors.cyan),
-                    SizedBox(width: 12),
-                    Text('Cài đặt', style: TextStyle(color: Colors.white)),
+                    Text('Nhiều tương tác'),
                   ],
                 ),
               ),
             ],
           ),
+          IconButton(
+            icon: Icon(Icons.message_outlined, color: Color(0xFF06b6d4)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MessagingScreen()),
+              );
+            },
+          ),
         ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(Duration(seconds: 1));
-          setState(() {
-            posts = MockData.posts;
-          });
-        },
-        child: ListView.builder(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final post = posts[index];
-            return _buildPostCard(post);
-          },
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Color(0xFF06b6d4),
+          labelColor: Color(0xFF06b6d4),
+          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
+          tabs: [
+            Tab(icon: Icon(Icons.home), text: 'Bảng tin'),
+            Tab(icon: Icon(Icons.person), text: 'Của bạn'),
+            Tab(icon: Icon(Icons.group), text: 'Theo dõi'),
+          ],
         ),
       ),
+      body: Column(
+        children: [
+          if (_tabController.index < 2)
+            StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('posts')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final allPosts = snapshot.hasData
+                    ? snapshot.data!.docs
+                        .map((doc) =>
+                            Post.fromJson(doc.data() as Map<String, dynamic>))
+                        .toList()
+                    : <Post>[]; // ensure typed as List<Post>
+
+                return SearchAndFilterWidget(
+                  searchController: _searchController,
+                  selectedTag: _selectedTag,
+                  suggestedTags: _suggestedTags,
+                  allPosts: allPosts,
+                  onSearchChanged: (value) {
+                    if (value.isEmpty) {
+                      setState(() {
+                        _selectedTag = '';
+                      });
+                    } else {
+                      setState(() {});
+                    }
+                  },
+                  onTagSelected: (tag) => setState(() => _selectedTag = tag),
+                );
+              },
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildFeedTab(),
+                _buildMyPostsTab(),
+                _buildFollowingTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showCreatePostDialog(context);
-        },
+        onPressed: () => _showCreatePostDialog(),
         backgroundColor: Color(0xFF06b6d4),
         child: Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildPostCard(Post post) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Color(0xFF1e293b),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserProfileScreen(user: post.user),
-                  ),
-                );
-              },
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: NetworkImage(post.user.avatar),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post.user.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (post.community != null)
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CommunityDetailScreen(
-                                    community: post.community!,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Row(
-                              children: [
-                                Text(
-                                  'từ: ',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  post.community!.name,
-                                  style: TextStyle(
-                                    color: Colors.cyan,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Text(
-                            _formatTimeAgo(post.createdAt),
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.more_vert, color: Colors.white),
-                    onPressed: () {
-                      _showPostOptions(context, post);
-                    },
-                  ),
-                ],
-              ),
-            ),
+  // ===== TAB 1: BẢNG TIN =====
+  Widget _buildFeedTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            SizedBox(height: 12),
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
 
-            Text(
-              post.content,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.4,
-                color: Colors.white,
-              ),
-            ),
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildEmptyState('Chưa có bài đăng nào', Icons.post_add);
+        }
 
-            if (post.mangaReference != null) ...[
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Color(0xFF06b6d4).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Color(0xFF06b6d4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.book,
-                      color: Color(0xFF06b6d4),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Tham chiếu: ${_getMangaTitle(post.mangaReference!)}',
-                      style: TextStyle(
-                        color: Color(0xFF06b6d4),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        final docs = snapshot.data!.docs;
+        final posts = docs
+            .map((doc) => Post.fromJson(doc.data() as Map<String, dynamic>))
+            .toList();
 
-            if (post.images.isNotEmpty) ...[
-              SizedBox(height: 12),
-              Container(
-                height: 200,
-                child: post.images.length == 1
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          post.images[0],
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: post.images.length,
-                        itemBuilder: (context, index) {
-                          return Container(
-                            width: 200,
-                            margin: EdgeInsets.only(right: 8),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                post.images[index],
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+        if (_sortBy == 'popular') {
+          posts.sort(
+              (a, b) => b.totalInteractions.compareTo(a.totalInteractions));
+        }
 
-            SizedBox(height: 16),
+        final filteredPosts = posts.where((post) {
+          final searchText = _searchController.text.toLowerCase();
+          
+          // If search contains hashtag, filter by tags
+          if (searchText.contains('#')) {
+            final hashIndex = searchText.lastIndexOf('#');
+            final tagQuery = searchText.substring(hashIndex + 1).trim();
+            
+            final tagMatch = tagQuery.isEmpty || 
+                post.tags.any((tag) => tag.toLowerCase().contains(tagQuery));
+            
+            return tagMatch;
+          }
+          
+          // Otherwise filter by content and user name
+          final searchMatch = searchText.isEmpty ||
+              post.content.toLowerCase().contains(searchText) ||
+              post.user.name.toLowerCase().contains(searchText);
+          
+          // Filter by selected tag from buttons
+          final selectedTagMatch = _selectedTag.isEmpty ||
+              post.tags.any((tag) => tag.toLowerCase() == _selectedTag.toLowerCase());
+          
+          return searchMatch && selectedTagMatch;
+        }).toList();
 
-            Row(
-              children: [
-                _buildActionButton(
-                  icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                  label: post.likes.toString(),
-                  color: post.isLiked ? Color(0xFFec4899) : Colors.white54,
-                  onTap: () {
-                    setState(() {
-                      final index = posts.indexOf(post);
-                      posts[index] = Post(
-                        id: post.id,
-                        user: post.user,
-                        content: post.content,
-                        images: post.images,
-                        createdAt: post.createdAt,
-                        likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-                        comments: post.comments,
-                        shares: post.shares,
-                        isLiked: !post.isLiked,
-                        mangaReference: post.mangaReference,
-                        community: post.community,
-                      );
-                    });
-                  },
-                ),
-                SizedBox(width: 24),
-                _buildActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  label: post.comments.toString(),
-                  color: Colors.white54,
-                  onTap: () {
-                    _showCommentsBottomSheet(context, post);
-                  },
-                ),
-                SizedBox(width: 24),
-                _buildActionButton(
-                  icon: Icons.share_outlined,
-                  label: post.shares.toString(),
-                  color: Colors.white54,
-                  onTap: () {
-                    _showShareOptions(context, post);
-                  },
-                ),
-                Spacer(),
-                IconButton(
-                  icon: Icon(Icons.bookmark_border),
-                  onPressed: () {},
-                  color: Colors.white54,
-                ),
-              ],
-            ),
-          ],
-        ),
+        if (filteredPosts.isEmpty) {
+          return _buildEmptyState(
+            _searchController.text.isNotEmpty || _selectedTag.isNotEmpty
+                ? 'Không tìm thấy bài viết'
+                : 'Chưa có bài đăng nào',
+            Icons.search,
+          );
+        }
+
+        return _buildPostList(filteredPosts, isDark);
+      },
+    );
+  }
+
+  // ===== TAB 2: BÀI VIẾT CỦA BẠN =====
+  Widget _buildMyPostsTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      return _buildEmptyState('Vui lòng đăng nhập', Icons.login);
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection('posts')
+          .where('user.id', isEqualTo: currentUser.uid)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        List<Post> allPosts = [];
+
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          allPosts = snapshot.data!.docs
+              .map((doc) => Post.fromJson(doc.data() as Map<String, dynamic>))
+              .toList();
+        }
+
+        // Fetch shared posts from userSharedPosts collection
+        return StreamBuilder<QuerySnapshot>(
+          stream: _firestore
+              .collection('userSharedPosts')
+              .where('sharedByUserId', isEqualTo: currentUser.uid)
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, sharedSnapshot) {
+            if (sharedSnapshot.hasData) {
+              final sharedPosts = sharedSnapshot.data!.docs
+                  .map((doc) =>
+                      Post.fromJson(doc.data() as Map<String, dynamic>))
+                  .toList();
+              allPosts.addAll(sharedPosts);
+              // Sort combined list by createdAt
+              allPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            }
+
+            if (allPosts.isEmpty) {
+              return _buildEmptyState(
+                'Bạn chưa đăng bài nào\nHãy chia sẻ suy nghĩ của bạn!',
+                Icons.edit_note,
+              );
+            }
+
+            final filteredPosts = allPosts.where((post) {
+              final searchText = _searchController.text.toLowerCase();
+
+              if (searchText.contains('#')) {
+                final hashIndex = searchText.lastIndexOf('#');
+                final tagQuery = searchText.substring(hashIndex + 1).trim();
+
+                final tagMatch = tagQuery.isEmpty ||
+                    post.tags.any((tag) =>
+                        tag.toLowerCase().contains(tagQuery));
+
+                return tagMatch;
+              }
+
+              final searchMatch = searchText.isEmpty ||
+                  post.content.toLowerCase().contains(searchText) ||
+                  post.user.name.toLowerCase().contains(searchText);
+
+              final selectedTagMatch = _selectedTag.isEmpty ||
+                  post.tags.any((tag) =>
+                      tag.toLowerCase() == _selectedTag.toLowerCase());
+
+              return searchMatch && selectedTagMatch;
+            }).toList();
+
+            if (filteredPosts.isEmpty) {
+              return _buildEmptyState(
+                'Không tìm thấy bài viết của bạn',
+                Icons.search,
+              );
+            }
+
+            return _buildPostList(filteredPosts, isDark);
+          },
+        );
+      },
+    );
+  }
+
+  // ===== TAB 3: THEO DÕI =====
+  Widget _buildFollowingTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      return _buildEmptyState('Vui lòng đăng nhập', Icons.login);
+    }
+
+    return StreamBuilder<List<Post>>(
+      stream: FirestoreService().getFollowingPostsStream(currentUser.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildEmptyState(
+            'Theo dõi nhóm dịch hoặc tác giả\nđể xem bài viết của họ ở đây!',
+            Icons.group_add,
+          );
+        }
+
+        final posts = snapshot.data ?? [];
+        final filteredPosts = posts.where((post) {
+          final searchText = _searchController.text.toLowerCase();
+
+          if (searchText.contains('#')) {
+            final hashIndex = searchText.lastIndexOf('#');
+            final tagQuery = searchText.substring(hashIndex + 1).trim();
+
+            final tagMatch = tagQuery.isEmpty ||
+                post.tags.any((tag) => tag.toLowerCase().contains(tagQuery));
+
+            return tagMatch;
+          }
+
+          final searchMatch = searchText.isEmpty ||
+              post.content.toLowerCase().contains(searchText) ||
+              post.user.name.toLowerCase().contains(searchText);
+
+          final selectedTagMatch = _selectedTag.isEmpty ||
+              post.tags.any((tag) =>
+                  tag.toLowerCase() == _selectedTag.toLowerCase());
+
+          return searchMatch && selectedTagMatch;
+        }).toList();
+
+        if (filteredPosts.isEmpty) {
+          return _buildEmptyState(
+            'Không tìm thấy bài viết',
+            Icons.search,
+          );
+        }
+
+        return _buildPostList(filteredPosts, isDark);
+      },
+    );
+  }
+
+  // ===== SHARED WIDGETS =====
+  Widget _buildPostList(List<Post> posts, bool isDark) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() {});
+        await Future.delayed(Duration(milliseconds: 500));
+      },
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        itemCount: posts.length,
+        itemBuilder: (context, index) {
+          return PostCardWidget(
+            post: posts[index],
+            isDark: isDark,
+            onLike: _toggleLike,
+            onComment: _showCommentsBottomSheet,
+            onMoreOptions: _showPostOptions,
+            onUserTap: _navigateToUserProfile,
+            onImageTap: _showImageViewer,
+          );
+        },
       ),
     );
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays} ngày trước';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} giờ trước';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} phút trước';
-    } else {
-      return 'Vừa xong';
+  // ===== ACTION METHODS =====
+  void _toggleLike(Post post) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      final firestoreService = FirestoreService();
+
+      final isCurrentlyLiked = await firestoreService.hasUserLikedPost(
+        post.id,
+        currentUser.uid,
+      );
+
+      final success = await firestoreService.togglePostLike(
+        post.id,
+        currentUser.uid,
+        isCurrentlyLiked,
+      );
+
+      if (!success) {
+        throw Exception('Lỗi cập nhật like');
+      }
+
+      if (!isCurrentlyLiked) {
+        final notifService = NotificationService();
+        await notifService.createLikeNotification(
+          postId: post.id,
+          postOwnerId: post.user.id,
+          fromUser: User(
+            id: currentUser.uid,
+            name: currentUser.displayName ?? 'Anonymous',
+            avatar: currentUser.photoURL ?? '',
+            bio: '',
+            followers: 0,
+            following: 0,
+            favoriteGenres: [],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling like: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  String _getMangaTitle(String mangaId) {
-    final manga = MockData.mangaList.firstWhere(
-      (m) => m.id == mangaId,
-      orElse: () => MockData.mangaList[0],
-    );
-    return manga.title;
-  }
+  void _showCreatePostDialog() {
+    final TextEditingController contentController = TextEditingController();
+    List<String> selectedTags = [];
+    List<File> selectedImages = [];
+    bool isUploading = false;
 
-  void _showCreateGroupDialog(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController descController = TextEditingController();
-    bool isPrivate = false;
+    final availableTags = _suggestedTags;
+    final cloudinaryService = CloudinaryService();
 
     showDialog(
       context: context,
@@ -385,80 +545,158 @@ class _SocialScreenState extends State<SocialScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: Color(0xFF1e293b),
-              title: Text('Tạo Nhóm/Cộng Đồng', style: TextStyle(color: Colors.white)),
+              backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+              title: Text('Tạo Bài Đăng'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
-                      controller: nameController,
-                      style: TextStyle(color: Colors.white),
+                      controller: contentController,
+                      maxLines: 4,
                       decoration: InputDecoration(
-                        labelText: 'Tên nhóm',
-                        labelStyle: TextStyle(color: Colors.cyan),
+                        hintText: 'Bạn đang nghĩ gì về truyện tranh?',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        filled: true,
-                        fillColor: Color(0xFF0f172a),
                       ),
                     ),
                     SizedBox(height: 16),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: isUploading
+                              ? null
+                              : () async {
+                                  try {
+                                    final images =
+                                        await cloudinaryService
+                                            .pickMultipleImagesFromGallery(
+                                                limit: 5);
+                                    if (images.isNotEmpty) {
+                                      setState(() {
+                                        selectedImages = images;
+                                      });
+                                    }
+                                  } catch (e) {
+                                    print('Error picking images: $e');
+                                  }
+                                },
+                          icon: Icon(Icons.image),
+                          label: Text('Chọn ảnh'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF06b6d4),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        if (selectedImages.isNotEmpty)
+                          Text(
+                            '${selectedImages.length} ảnh',
+                            style: TextStyle(
+                              color: Color(0xFF06b6d4),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (selectedImages.isNotEmpty) ...[
+                      SizedBox(height: 12),
+                      _buildImagePreviewList(selectedImages, setState),
+                    ],
+                    SizedBox(height: 16),
+                    Text('Tags:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    SizedBox(height: 8),
                     TextField(
-                      controller: descController,
-                      maxLines: 3,
-                      style: TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Mô tả',
-                        labelStyle: TextStyle(color: Colors.cyan),
+                        hintText: 'Nhập tags (ví dụ: #manga #action #drama). Mỗi tag bắt buộc phải có #',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        filled: true,
-                        fillColor: Color(0xFF0f172a),
+                        prefixIcon: Icon(Icons.tag),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    SwitchListTile(
-                      title: Text('Nhóm riêng tư', style: TextStyle(color: Colors.white)),
-                      subtitle: Text(
-                        'Yêu cầu phê duyệt để tham gia',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      value: isPrivate,
-                      activeColor: Colors.cyan,
                       onChanged: (value) {
                         setState(() {
-                          isPrivate = value;
+                          // Parse tags từ input: tách theo khoảng trắng và lọc những có #
+                          selectedTags = value
+                              .split(RegExp(r'\s+'))
+                              .where((tag) => tag.startsWith('#') && tag.length > 1)
+                              .map((tag) => tag.substring(1)) // Remove # từ tag
+                              .toList();
                         });
                       },
                     ),
+                    if (selectedTags.isNotEmpty) ...[
+                      SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: selectedTags.map((tag) {
+                          return Chip(
+                            label: Text('#$tag'),
+                            onDeleted: () {
+                              setState(() {
+                                selectedTags.remove(tag);
+                              });
+                            },
+                            backgroundColor: Color(0xFFec4899),
+                            labelStyle: TextStyle(color: Colors.white),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Hủy', style: TextStyle(color: Colors.white54)),
+                  child: Text('Hủy'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đã tạo nhóm "${nameController.text}"!'),
-                          backgroundColor: Colors.cyan,
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: isUploading || contentController.text.isEmpty
+                      ? null
+                      : () async {
+                          setState(() => isUploading = true);
+                          try {
+                            await _createPost(
+                              contentController.text,
+                              selectedTags,
+                              selectedImages,
+                            );
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Lỗi: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() => isUploading = false);
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF06b6d4),
                     foregroundColor: Colors.white,
                   ),
-                  child: Text('Tạo'),
+                  child: isUploading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : Text('Đăng'),
                 ),
               ],
             );
@@ -468,77 +706,129 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
-  void _showCreatePostDialog(BuildContext context) {
-    final TextEditingController contentController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Color(0xFF1e293b),
-          title: Text('Tạo Bài Đăng', style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: contentController,
-                maxLines: 4,
-                style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Bạn đang nghĩ gì về truyện tranh?',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  filled: true,
-                  fillColor: Color(0xFF0f172a),
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
+  Widget _buildImagePreviewList(
+    List<File> images,
+    StateSetter setState,
+  ) {
+    return Container(
+      height: 100,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(
+            images.length,
+            (index) {
+              return Stack(
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.image, color: Color(0xFF06b6d4)),
-                    onPressed: () {},
+                  Container(
+                    width: 100,
+                    height: 100,
+                    margin: EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
+                        image: FileImage(images[index]),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.book, color: Color(0xFFec4899)),
-                    onPressed: () {},
+                  Positioned(
+                    top: 4,
+                    right: 12,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          images.removeAt(index);
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close,
+                            color: Colors.white, size: 16),
+                      ),
+                    ),
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Hủy', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (contentController.text.isNotEmpty) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Đã tạo bài đăng!')),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF06b6d4),
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Đăng'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _showPostOptions(BuildContext context, Post post) {
+  Future<void> _createPost(
+    String content,
+    List<String> tags,
+    List<File> imageFiles,
+  ) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('Vui lòng đăng nhập');
+    }
+
+    try {
+      List<String> imageUrls = [];
+      if (imageFiles.isNotEmpty) {
+        try {
+          final cloudinaryService = CloudinaryService();
+          imageUrls = await cloudinaryService.uploadPostImages(imageFiles);
+        } catch (e) {
+          throw Exception('Lỗi upload ảnh: ${e.toString()}');
+        }
+      }
+
+      final user = User(
+        id: currentUser.uid,
+        name: currentUser.displayName ?? 'Anonymous',
+        avatar: currentUser.photoURL ?? 'https://via.placeholder.com/150',
+        bio: '',
+        followers: 0,
+        following: 0,
+        favoriteGenres: [],
+      );
+
+      final newPost = Post(
+        id: _firestore.collection('posts').doc().id,
+        user: user,
+        content: content,
+        images: imageUrls,
+        tags: tags,
+        createdAt: DateTime.now(),
+      );
+
+      try {
+        await _firestore
+            .collection('posts')
+            .doc(newPost.id)
+            .set(newPost.toJson());
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Đã đăng bài thành công!'),
+              backgroundColor: Color(0xFF10b981),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        throw Exception('Lỗi lưu bài viết: ${e.toString()}');
+      }
+    } catch (e) {
+      print('Error creating post: $e');
+      rethrow;
+    }
+  }
+
+  void _showPostOptions(Post post) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Color(0xFF1e293b),
+      backgroundColor: Theme.of(context).bottomSheetTheme.backgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -548,21 +838,43 @@ class _SocialScreenState extends State<SocialScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: Icon(Icons.bookmark_outline, color: Colors.white),
-                title: Text('Lưu bài đăng', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.report_outlined, color: Colors.white),
-                title: Text('Báo cáo bài đăng', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.block, color: Colors.white),
-                title: Text('Ẩn từ ${post.user.name}', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
+              if (_auth.currentUser?.uid == post.user.id) ...[
+                ListTile(
+                  leading: Icon(Icons.edit, color: Color(0xFF06b6d4)),
+                  title: Text('Chỉnh sửa'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showEditPostDialog(post);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.delete, color: Colors.red),
+                  title: Text('Xóa', style: TextStyle(color: Colors.red)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      await _firestore
+                          .collection('posts')
+                          .doc(post.id)
+                          .delete();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Đã xóa bài viết')),
+                      );
+                    } catch (e) {
+                      print('Error deleting post: $e');
+                    }
+                  },
+                ),
+              ] else ...[
+                ListTile(
+                  leading: Icon(Icons.flag, color: Colors.orange),
+                  title: Text('Báo cáo'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Report post
+                  },
+                ),
+              ],
             ],
           ),
         );
@@ -570,11 +882,87 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
-  void _showCommentsBottomSheet(BuildContext context, Post post) {
+  void _showEditPostDialog(Post post) {
+    final contentController = TextEditingController(text: post.content);
+    final tagsController = TextEditingController(text: post.tags.join(', '));
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Chỉnh sửa bài viết'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: contentController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Nội dung bài viết',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: tagsController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'Tags (cách nhau bằng dấu phẩy)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  final updatedTags = tagsController.text
+                      .split(',')
+                      .map((tag) => tag.trim())
+                      .where((tag) => tag.isNotEmpty)
+                      .toList();
+
+                  await _firestore
+                      .collection('posts')
+                      .doc(post.id)
+                      .update({
+                    'content': contentController.text,
+                    'tags': updatedTags,
+                  });
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Cập nhật bài viết thành công')),
+                    );
+                  }
+                } catch (e) {
+                  print('Error updating post: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Lỗi cập nhật bài viết')),
+                  );
+                }
+              },
+              child: Text('Lưu'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCommentsBottomSheet(Post post) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Color(0xFF1e293b),
+      backgroundColor: Theme.of(context).bottomSheetTheme.backgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -588,103 +976,64 @@ class _SocialScreenState extends State<SocialScreen> {
               padding: EdgeInsets.all(16),
               child: Column(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Bình luận (${post.comments})',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: 5,
-                      itemBuilder: (context, index) {
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 12),
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF0f172a),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundImage: NetworkImage(
-                                  '/placeholder.svg?height=32&width=32',
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Người dùng ${index + 1}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Đây là bình luận mẫu về bài đăng.',
-                                      style: TextStyle(color: Colors.white70),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.white12)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            style: TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'Viết bình luận...',
-                              hintStyle: TextStyle(color: Colors.white38),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: Color(0xFF0f172a),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Bình luận',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.color,
                               ),
                             ),
-                          ),
+                            SizedBox(height: 4),
+                            StreamBuilder<int>(
+                              stream: FirestoreService()
+                                  .getCommentCountStream(post.id),
+                              builder: (context, snapshot) {
+                                final totalCount = snapshot.data ?? 0;
+                                return Text(
+                                  '$totalCount bình luận',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withOpacity(0.6),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(Icons.send, color: Color(0xFF06b6d4)),
-                          onPressed: () {},
-                        ),
-                      ],
+                      ),
+                      SizedBox(width: 40),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Divider(height: 1),
+                  SizedBox(height: 16),
+                  Expanded(
+                    child: CommentSectionWidget(
+                      postId: post.id,
+                      onUserTap: _navigateToUserProfile,
                     ),
                   ),
                 ],
@@ -696,83 +1045,126 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
-  void _showShareOptions(BuildContext context, Post post) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Color(0xFF1e293b),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  void _navigateToUserProfile(User user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileScreen(user: user),
       ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Chia Sẻ Bài Đăng',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+    );
+  }
+
+  void _showNotificationScreen() {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vui lòng đăng nhập')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NotificationScreen(userId: currentUser.uid),
+      ),
+    );
+  }
+
+  void _showImageViewer(
+      BuildContext context, List<String> images, int initialIndex) {
+    final PageController pageController =
+        PageController(initialPage: initialIndex);
+    int currentPage = initialIndex;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Stack(
+              children: [
+                PageView.builder(
+                  itemCount: images.length,
+                  controller: pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      currentPage = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    return InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Center(
+                        child: CachedNetworkImage(
+                          imageUrl: images[index],
+                          fit: BoxFit.contain,
+                          placeholder: (context, url) =>
+                              CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                          errorWidget: (context, url, error) => Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error,
+                                  color: Colors.white, size: 64),
+                              SizedBox(height: 16),
+                              Text('Không tải được ảnh',
+                                  style: TextStyle(color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildShareOption(Icons.copy, 'Sao chép'),
-                  _buildShareOption(Icons.message, 'Tin nhắn'),
-                  _buildShareOption(Icons.share, 'Khác'),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildShareOption(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Color(0xFF06b6d4).withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Color(0xFF06b6d4)),
+                Positioned(
+                  top: 40,
+                  right: 16,
+                  child: IconButton(
+                    icon: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close, color: Colors.white, size: 24),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                if (images.length > 1)
+                  Positioned(
+                    bottom: 40,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${currentPage + 1} / ${images.length}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-        SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,0 +1,74 @@
+{
+  "app_name": "Lory",
+  "app_subtitle": "Đọc truyện tranh mọi lúc, mọi nơi",
+
+  "nav": {
+    "home": "Trang chủ",
+    "library": "Bộ sưu tập",
+    "community": "Cộng đồng",
+    "profile": "Cá nhân"
+  },
+
+  "login": {
+    "title": "Đăng Nhập",
+    "email_label": "Email",
+    "email_hint": "Nhập email của bạn",
+    "email_required": "Vui lòng nhập email",
+    "email_invalid": "Email không hợp lệ",
+    "password_label": "Mật khẩu",
+    "password_required": "Vui lòng nhập mật khẩu",
+    "password_min_length": "Mật khẩu phải có ít nhất 6 ký tự",
+    "forgot_password": "Quên mật khẩu?",
+    "button": "Đăng Nhập",
+    "button_google": "Đăng nhập với Google",
+    "no_account": "Chưa có tài khoản?",
+    "register_now": "Đăng ký ngay",
+    "or_divider": "hoặc"
+  },
+
+  "register": {
+    "title": "Đăng ký",
+    "headline": "Tạo tài khoản mới",
+    "subtitle": "Điền thông tin để tạo tài khoản",
+    "email_label": "Email",
+    "email_hint": "example@email.com",
+    "email_required": "Vui lòng nhập email",
+    "email_invalid": "Email không hợp lệ",
+    "password_label": "Mật khẩu",
+    "password_required": "Vui lòng nhập mật khẩu",
+    "password_min_length": "Mật khẩu phải có ít nhất 6 ký tự",
+    "password_hint": "Mật khẩu phải có ít nhất 6 ký tự",
+    "confirm_password_label": "Xác nhận mật khẩu",
+    "confirm_password_required": "Vui lòng xác nhận mật khẩu",
+    "confirm_password_mismatch": "Mật khẩu không khớp",
+    "button": "Đăng ký",
+    "have_account": "Đã có tài khoản?",
+    "login_now": "Đăng nhập",
+    "success_dialog_title": "Kiểm tra email",
+    "success_dialog_info": "Sau khi xác thực, bạn có thể đăng nhập",
+    "success_dialog_button": "Đã hiểu"
+  },
+
+  "forgot_password": {
+    "title": "Quên mật khẩu",
+    "headline": "Khôi phục mật khẩu",
+    "subtitle": "Nhập email của bạn và chúng tôi sẽ gửi hướng dẫn khôi phục mật khẩu",
+    "email_label": "Email",
+    "email_hint": "Nhập địa chỉ email",
+    "email_required": "Vui lòng nhập email",
+    "email_invalid": "Email không hợp lệ",
+    "info_message": "Email khôi phục có thể mất vài phút để đến. Hãy kiểm tra cả thư mục spam.",
+    "button_send": "Gửi email khôi phục",
+    "button_back_to_login": "Quay lại đăng nhập",
+    "success_title": "Email đã được gửi!",
+    "success_subtitle": "Vui lòng kiểm tra hộp thư của bạn và làm theo hướng dẫn để khôi phục mật khẩu",
+    "success_info": "Email có thể mất vài phút để đến. Nếu không thấy email, hãy kiểm tra thư mục spam.",
+    "button_resend": "Gửi lại email"
+  },
+
+  "dialog": {
+    "email_not_verified_title": "Email chưa xác thực",
+    "cancel": "Hủy",
+    "resend": "Gửi lại"
+  }
+}

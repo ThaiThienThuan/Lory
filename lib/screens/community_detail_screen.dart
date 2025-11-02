@@ -26,7 +26,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   @override
   Widget build(BuildContext context) {
     // Lấy bài đăng của cộng đồng này
-    final communityPosts = mockPosts.where((post) => post.community?.id == widget.community.id).toList();
+    final communityPosts = mockPosts
+        .where((post) => post.community?.id == widget.community.id)
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0f172a),
@@ -45,7 +47,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.7)
+                        ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -68,7 +73,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         ),
                         Text(
                           '${widget.community.memberCount} thành viên',
-                          style: TextStyle(color: Colors.grey.shade300, fontSize: 14),
+                          style: TextStyle(
+                              color: Colors.grey.shade300, fontSize: 14),
                         ),
                       ],
                     ),
@@ -103,7 +109,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(isJoined ? 'Đã tham gia nhóm' : 'Đã rời khỏi nhóm'),
+                                content: Text(isJoined
+                                    ? 'Đã tham gia nhóm'
+                                    : 'Đã rời khỏi nhóm'),
                                 backgroundColor: Colors.cyan,
                               ),
                             );
@@ -111,7 +119,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           icon: Icon(isJoined ? Icons.check : Icons.add),
                           label: Text(isJoined ? 'Đã tham gia' : 'Tham gia'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isJoined ? const Color(0xFF1e293b) : Colors.cyan,
+                            backgroundColor: isJoined
+                                ? const Color(0xFF1e293b)
+                                : Colors.cyan,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
@@ -125,7 +135,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1e293b),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         child: const Icon(Icons.person_add),
                       ),
@@ -171,9 +182,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 (context, index) {
                   final user = mockUsers[index % mockUsers.length];
                   return ListTile(
-                    leading: CircleAvatar(backgroundImage: NetworkImage(user.avatar)),
-                    title: Text(user.name, style: const TextStyle(color: Colors.white)),
-                    subtitle: Text(user.bio, style: TextStyle(color: Colors.grey.shade400)),
+                    leading: CircleAvatar(
+                        backgroundImage: NetworkImage(user.avatar)),
+                    title: Text(user.name,
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(user.bio,
+                        style: TextStyle(color: Colors.grey.shade400)),
                     trailing: const Icon(Icons.more_vert, color: Colors.grey),
                   );
                 },
@@ -188,9 +202,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow(Icons.public, widget.community.isPrivate ? 'Nhóm riêng tư' : 'Nhóm công khai'),
-                    _buildInfoRow(Icons.people, '${widget.community.memberCount} thành viên'),
-                    _buildInfoRow(Icons.post_add, '${communityPosts.length} bài đăng'),
+                    _buildInfoRow(
+                        Icons.public,
+                        widget.community.isPrivate
+                            ? 'Nhóm riêng tư'
+                            : 'Nhóm công khai'),
+                    _buildInfoRow(Icons.people,
+                        '${widget.community.memberCount} thành viên'),
+                    _buildInfoRow(
+                        Icons.post_add, '${communityPosts.length} bài đăng'),
                   ],
                 ),
               ),
@@ -235,16 +255,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundImage: NetworkImage(post.user.avatar), radius: 20),
+              CircleAvatar(
+                  backgroundImage: NetworkImage(post.user.avatar), radius: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(post.user.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(post.user.name,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                     Text(
                       '${_formatTime(post.createdAt)}',
-                      style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                      style:
+                          TextStyle(color: Colors.grey.shade400, fontSize: 12),
                     ),
                   ],
                 ),
@@ -257,7 +281,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(post.images.first, height: 200, width: double.infinity, fit: BoxFit.cover),
+              child: Image.network(post.images.first,
+                  height: 200, width: double.infinity, fit: BoxFit.cover),
             ),
           ],
         ],
@@ -281,7 +306,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    
+
     if (diff.inDays > 0) return '${diff.inDays} ngày trước';
     if (diff.inHours > 0) return '${diff.inHours} giờ trước';
     if (diff.inMinutes > 0) return '${diff.inMinutes} phút trước';

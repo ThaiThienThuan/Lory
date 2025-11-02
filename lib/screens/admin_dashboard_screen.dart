@@ -10,7 +10,8 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  int selectedTab = 0; // 0: Tổng quan, 1: Tài khoản, 2: Bài đăng, 3: Gallery, 4: Kho truyện
+  int selectedTab =
+      0; // 0: Tổng quan, 1: Tài khoản, 2: Bài đăng, 3: Gallery, 4: Kho truyện
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +46,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const Divider(color: Colors.white24, height: 40),
                 ListTile(
                   leading: const Icon(Icons.settings, color: Colors.white70),
-                  title: const Text('Cài Đặt', style: TextStyle(color: Colors.white70)),
+                  title: const Text('Cài Đặt',
+                      style: TextStyle(color: Colors.white70)),
                   onTap: () {},
                 ),
                 ListTile(
                   leading: const Icon(Icons.exit_to_app, color: Colors.red),
-                  title: const Text('Thoát Admin', style: TextStyle(color: Colors.red)),
+                  title: const Text('Thoát Admin',
+                      style: TextStyle(color: Colors.red)),
                   onTap: () => Navigator.pop(context),
                 ),
               ],
@@ -126,10 +129,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             children: [
-              _buildStatCard('Người Dùng', mockUsers.length.toString(), Icons.people, Colors.cyan),
-              _buildStatCard('Truyện', mockMangaList.length.toString(), Icons.book, Colors.pink),
-              _buildStatCard('Bài Đăng', mockPosts.length.toString(), Icons.post_add, Colors.orange),
-              _buildStatCard('Gallery', mockGalleryItems.length.toString(), Icons.photo, Colors.green),
+              _buildStatCard('Người Dùng', mockUsers.length.toString(),
+                  Icons.people, Colors.cyan),
+              _buildStatCard('Truyện', mockMangaList.length.toString(),
+                  Icons.book, Colors.pink),
+              _buildStatCard('Bài Đăng', mockPosts.length.toString(),
+                  Icons.post_add, Colors.orange),
+              _buildStatCard('Gallery', mockGalleryItems.length.toString(),
+                  Icons.photo, Colors.green),
             ],
           ),
 
@@ -155,7 +162,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 5,
-              separatorBuilder: (context, index) => const Divider(color: Colors.white12),
+              separatorBuilder: (context, index) =>
+                  const Divider(color: Colors.white12),
               itemBuilder: (context, index) {
                 return ListTile(
                   leading: CircleAvatar(
@@ -179,7 +187,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -291,14 +300,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           Text(
                             user.bio,
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 14),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${user.followers} người theo dõi',
-                            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 12),
                           ),
                         ],
                       ),
@@ -322,7 +333,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Icon(Icons.edit, color: Colors.cyan),
                               SizedBox(width: 12),
-                              Text('Chỉnh sửa', style: TextStyle(color: Colors.white)),
+                              Text('Chỉnh sửa',
+                                  style: TextStyle(color: Colors.white)),
                             ],
                           ),
                         ),
@@ -332,7 +344,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Icon(Icons.block, color: Colors.orange),
                               SizedBox(width: 12),
-                              Text('Cấm tài khoản', style: TextStyle(color: Colors.white)),
+                              Text('Cấm tài khoản',
+                                  style: TextStyle(color: Colors.white)),
                             ],
                           ),
                         ),
@@ -342,7 +355,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Icon(Icons.delete, color: Colors.red),
                               SizedBox(width: 12),
-                              Text('Xóa tài khoản', style: TextStyle(color: Colors.white)),
+                              Text('Xóa tài khoản',
+                                  style: TextStyle(color: Colors.white)),
                             ],
                           ),
                         ),
@@ -414,7 +428,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                               Text(
                                 _formatTime(post.createdAt),
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 12),
                               ),
                             ],
                           ),
@@ -435,13 +450,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.favorite, size: 16, color: Colors.grey.shade400),
+                        Icon(Icons.favorite,
+                            size: 16, color: Colors.grey.shade400),
                         const SizedBox(width: 4),
-                        Text('${post.likes}', style: TextStyle(color: Colors.grey.shade400)),
+                        Text('${post.likes}',
+                            style: TextStyle(color: Colors.grey.shade400)),
                         const SizedBox(width: 16),
-                        Icon(Icons.comment, size: 16, color: Colors.grey.shade400),
+                        Icon(Icons.comment,
+                            size: 16, color: Colors.grey.shade400),
                         const SizedBox(width: 4),
-                        Text('${post.comments}', style: TextStyle(color: Colors.grey.shade400)),
+                        Text('${post.comments}',
+                            style: TextStyle(color: Colors.grey.shade400)),
                       ],
                     ),
                   ],
@@ -496,7 +515,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   children: [
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12)),
                         child: Image.network(
                           item.imageUrl,
                           width: double.infinity,
@@ -521,7 +541,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           const SizedBox(height: 4),
                           Text(
                             item.artistName,
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Row(
@@ -529,16 +550,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.favorite, size: 14, color: Colors.grey.shade400),
+                                  Icon(Icons.favorite,
+                                      size: 14, color: Colors.grey.shade400),
                                   const SizedBox(width: 4),
-                                  Text('${item.likes}', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                                  Text('${item.likes}',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade400,
+                                          fontSize: 12)),
                                 ],
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                icon: const Icon(Icons.delete,
+                                    color: Colors.red, size: 20),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                onPressed: () => _showDeleteGalleryDialog(context, item),
+                                onPressed: () =>
+                                    _showDeleteGalleryDialog(context, item),
                               ),
                             ],
                           ),
@@ -627,23 +654,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           const SizedBox(height: 4),
                           Text(
                             manga.author,
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 14),
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.star, color: Colors.orange, size: 16),
+                              const Icon(Icons.star,
+                                  color: Colors.orange, size: 16),
                               const SizedBox(width: 4),
                               Text(
                                 '${manga.rating}',
-                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 14),
                               ),
                               const SizedBox(width: 16),
-                              Icon(Icons.visibility, size: 16, color: Colors.grey.shade400),
+                              Icon(Icons.visibility,
+                                  size: 16, color: Colors.grey.shade400),
                               const SizedBox(width: 4),
                               Text(
                                 '${manga.views}',
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                                style: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 14),
                               ),
                             ],
                           ),
@@ -667,7 +699,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Icon(Icons.edit, color: Colors.cyan),
                               SizedBox(width: 12),
-                              Text('Chỉnh sửa', style: TextStyle(color: Colors.white)),
+                              Text('Chỉnh sửa',
+                                  style: TextStyle(color: Colors.white)),
                             ],
                           ),
                         ),
@@ -677,7 +710,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Icon(Icons.delete, color: Colors.red),
                               SizedBox(width: 12),
-                              Text('Xóa truyện', style: TextStyle(color: Colors.white)),
+                              Text('Xóa truyện',
+                                  style: TextStyle(color: Colors.white)),
                             ],
                           ),
                         ),
@@ -699,7 +733,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1e293b),
-        title: const Text('Chỉnh Sửa Người Dùng', style: TextStyle(color: Colors.white)),
+        title: const Text('Chỉnh Sửa Người Dùng',
+            style: TextStyle(color: Colors.white)),
         content: const Text(
           'Tính năng chỉnh sửa người dùng sẽ được triển khai.',
           style: TextStyle(color: Colors.white70),
@@ -719,7 +754,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1e293b),
-        title: const Text('Cấm Tài Khoản', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Cấm Tài Khoản', style: TextStyle(color: Colors.white)),
         content: Text(
           'Bạn có chắc chắn muốn cấm tài khoản "${user.name}"?',
           style: const TextStyle(color: Colors.white70),
@@ -752,7 +788,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1e293b),
-        title: const Text('Xóa Tài Khoản', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Xóa Tài Khoản', style: TextStyle(color: Colors.white)),
         content: Text(
           'Bạn có chắc chắn muốn xóa tài khoản "${user.name}"? Hành động này không thể hoàn tác.',
           style: const TextStyle(color: Colors.white70),
@@ -785,7 +822,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1e293b),
-        title: const Text('Xóa Bài Đăng', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Xóa Bài Đăng', style: TextStyle(color: Colors.white)),
         content: const Text(
           'Bạn có chắc chắn muốn xóa bài đăng này?',
           style: TextStyle(color: Colors.white70),
@@ -882,7 +920,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    
+
     if (diff.inDays > 0) return '${diff.inDays} ngày trước';
     if (diff.inHours > 0) return '${diff.inHours} giờ trước';
     if (diff.inMinutes > 0) return '${diff.inMinutes} phút trước';

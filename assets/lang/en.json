@@ -1,0 +1,74 @@
+{
+  "app_name": "Lory",
+  "app_subtitle": "Read manga anytime, anywhere",
+
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "community": "Community",
+    "profile": "Profile"
+  },
+
+  "login": {
+    "title": "Login",
+    "email_label": "Email",
+    "email_hint": "Enter your email",
+    "email_required": "Please enter email",
+    "email_invalid": "Invalid email",
+    "password_label": "Password",
+    "password_required": "Please enter password",
+    "password_min_length": "Password must be at least 6 characters",
+    "forgot_password": "Forgot password?",
+    "button": "Login",
+    "button_google": "Login with Google",
+    "no_account": "Don't have an account?",
+    "register_now": "Register now",
+    "or_divider": "or"
+  },
+
+  "register": {
+    "title": "Register",
+    "headline": "Create new account",
+    "subtitle": "Fill in the information to create an account",
+    "email_label": "Email",
+    "email_hint": "example@email.com",
+    "email_required": "Please enter email",
+    "email_invalid": "Invalid email",
+    "password_label": "Password",
+    "password_required": "Please enter password",
+    "password_min_length": "Password must be at least 6 characters",
+    "password_hint": "Password must be at least 6 characters",
+    "confirm_password_label": "Confirm Password",
+    "confirm_password_required": "Please confirm password",
+    "confirm_password_mismatch": "Passwords do not match",
+    "button": "Register",
+    "have_account": "Already have an account?",
+    "login_now": "Login",
+    "success_dialog_title": "Check your email",
+    "success_dialog_info": "You can login after verification",
+    "success_dialog_button": "Got it"
+  },
+
+  "forgot_password": {
+    "title": "Forgot Password",
+    "headline": "Reset Password",
+    "subtitle": "Enter your email and we'll send you instructions to reset your password",
+    "email_label": "Email",
+    "email_hint": "Enter your email address",
+    "email_required": "Please enter email",
+    "email_invalid": "Invalid email",
+    "info_message": "Password reset email may take a few minutes to arrive. Check your spam folder too.",
+    "button_send": "Send reset email",
+    "button_back_to_login": "Back to login",
+    "success_title": "Email sent!",
+    "success_subtitle": "Please check your inbox and follow the instructions to reset your password",
+    "success_info": "Email may take a few minutes to arrive. If you don't see it, check your spam folder.",
+    "button_resend": "Resend email"
+  },
+
+  "dialog": {
+    "email_not_verified_title": "Email Not Verified",
+    "cancel": "Cancel",
+    "resend": "Resend"
+  }
+}

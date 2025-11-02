@@ -74,16 +74,19 @@ class _UploadGalleryScreenState extends State<UploadGalleryScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate, color: Colors.cyan, size: 64),
+                          Icon(Icons.add_photo_alternate,
+                              color: Colors.cyan, size: 64),
                           const SizedBox(height: 12),
                           const Text(
                             'Chọn ảnh fanart',
-                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 16),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Khuyến nghị: 1080x1350px',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 12),
                           ),
                         ],
                       ),
@@ -175,11 +178,14 @@ class _UploadGalleryScreenState extends State<UploadGalleryScreen> {
                                   ? 'Truyện đã chọn'
                                   : 'Chọn truyện (tùy chọn)',
                               style: TextStyle(
-                                color: _selectedMangaId != null ? Colors.white : Colors.grey.shade600,
+                                color: _selectedMangaId != null
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
                               ),
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios, color: Colors.grey.shade600, size: 16),
+                          Icon(Icons.arrow_forward_ios,
+                              color: Colors.grey.shade600, size: 16),
                         ],
                       ),
                     ),
@@ -212,8 +218,10 @@ class _UploadGalleryScreenState extends State<UploadGalleryScreen> {
                       ),
                       TextButton.icon(
                         onPressed: _addTag,
-                        icon: const Icon(Icons.add, color: Colors.cyan, size: 16),
-                        label: const Text('Thêm', style: TextStyle(color: Colors.cyan)),
+                        icon:
+                            const Icon(Icons.add, color: Colors.cyan, size: 16),
+                        label: const Text('Thêm',
+                            style: TextStyle(color: Colors.cyan)),
                       ),
                     ],
                   ),
@@ -232,7 +240,8 @@ class _UploadGalleryScreenState extends State<UploadGalleryScreen> {
                           label: Text(tag),
                           backgroundColor: Colors.cyan.withOpacity(0.2),
                           labelStyle: const TextStyle(color: Colors.cyan),
-                          deleteIcon: const Icon(Icons.close, size: 16, color: Colors.cyan),
+                          deleteIcon: const Icon(Icons.close,
+                              size: 16, color: Colors.cyan),
                           onDeleted: () {
                             setState(() {
                               _selectedTags.remove(tag);
@@ -251,18 +260,29 @@ class _UploadGalleryScreenState extends State<UploadGalleryScreen> {
     );
   }
 
-  void _pickImage() {
-    // Trong thực tế, sẽ mở image picker
-    // Ở đây chỉ demo với placeholder
+  Future<void> _pickImage() async {
+    // Import StorageService để sử dụng Cloudinary upload
+    // Tạm thời demo với placeholder, cần implement thực tế
     setState(() {
       _selectedImageUrl = '/placeholder.svg?height=400&width=300';
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Đã chọn ảnh'),
+        content: Text(
+            'Đã chọn ảnh. Upload với Cloudinary sẽ được thực hiện khi đăng.'),
         backgroundColor: Colors.cyan,
       ),
     );
+
+    /* TODO: Implement real image picker
+    final storageService = StorageService();
+    final file = await storageService.pickImageFromGallery();
+    if (file != null) {
+      setState(() {
+        _selectedImageFile = file;
+      });
+    }
+    */
   }
 
   void _selectManga() {

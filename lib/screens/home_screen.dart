@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/manga.dart';
 import '../services/firestore_service.dart';
-import 'upload_manga_screen.dart' as upload;
+import 'upload_manga_with_chapters_screen.dart';
+import 'search_results_screen.dart';
+import '../utils/time_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -25,6 +27,17 @@ class _HomeScreenState extends State<HomeScreen> {
   int _displayedMangaCount = 6;
   bool _isLoading = true;
 
+  List<String> _selectedGenres = [];
+  bool _showGenreFilter = false;
+  List<String> _availableGenres = [
+    'Action', 'Romance', 'Comedy', 'Fantasy', 'Slice of Life',
+    'Horror', 'Sci-Fi', 'Mystery', 'Drama', 'Adventure',
+    'Manga', 'Manhwa', 'Manhua', 'Martial Arts', 'Magic',
+    'Thriller', 'Friendship'
+  ];
+  StreamSubscription? _mangaStreamSubscription;
+  StreamSubscription? _hotMangaStreamSubscription;
+
   final bool isTranslationGroup = true;
   final bool isAdmin = false;
 
@@ -42,16 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _bannerController.dispose();
     _scrollController.dispose();
     _bannerTimer?.cancel();
+    _mangaStreamSubscription?.cancel();
+    _hotMangaStreamSubscription?.cancel();
     super.dispose();
   }
 
   void _loadMangaFromFirestore() {
-    _firestoreService.getMangaStream().listen((mangaList) {
+    _mangaStreamSubscription =
+        _firestoreService.getMangaStream().listen((mangaList) {
+      if (!mounted) return;
       setState(() {
         _allManga = mangaList;
         _filteredManga = mangaList;
         _isLoading = false;
-        
+
         // Featured manga: lấy 6 manga có rating cao nhất
         _featuredManga = List.from(mangaList)
           ..sort((a, b) => b.rating.compareTo(a.rating))
@@ -62,18 +79,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ..sort((a, b) {
             if (a.chapters.isEmpty) return 1;
             if (b.chapters.isEmpty) return -1;
-            return b.chapters.first.releaseDate.compareTo(a.chapters.first.releaseDate);
+            return b.chapters.first.releaseDate
+                .compareTo(a.chapters.first.releaseDate);
           })
           ..take(10).toList();
       });
     });
 
-    // Load hot manga (manga có views cao nhất)
-    _firestoreService.getHotMangaStream(limit: 10).listen((hotList) {
+    _hotMangaStreamSubscription =
+        _firestoreService.getHotMangaStream(limit: 10).listen((hotList) {
+      if (!mounted) return;
       setState(() {
         _hotManga = hotList;
       });
     });
+  }
+  
+  List<Manga> _applyGenreFilter(List<Manga> mangaList) {
+    if (_selectedGenres.isEmpty) {
+      return mangaList;
+    }
+    return mangaList.where((manga) {
+      // Kiểm tra xem manga có chứa ít nhất một genre được chọn không
+      return manga.genres.any((genre) => _selectedGenres.contains(genre));
+    }).toList();
   }
 
   void _startBannerAutoScroll() {
@@ -102,28 +131,46 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _filterManga(String query) {
+    if (query.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsScreen(
+            searchQuery: query,
+            allManga: _allManga,
+          ),
+        ),
+      );
+      _searchController.clear();
+    }
+  }
+  void _toggleGenre(String genre) {
     setState(() {
-      if (query.isEmpty) {
-        _filteredManga = _allManga;
+      if (_selectedGenres.contains(genre)) {
+        _selectedGenres.remove(genre);
       } else {
-        final lowerQuery = query.toLowerCase().trim();
-        _filteredManga = _allManga
-            .where((manga) =>
-                manga.title.toLowerCase().contains(lowerQuery) ||
-                manga.author.toLowerCase().contains(lowerQuery) ||
-                manga.genres.any((genre) =>
-                    genre.toLowerCase().contains(lowerQuery)))
-            .toList();
+        _selectedGenres.add(genre);
       }
-      _displayedMangaCount = 6;
-      print('[v0] Search query: "$query", Results: ${_filteredManga.length}');
+      // áp dụng filter lại
+      _filteredManga = _applyGenreFilter(_allManga);
+      _featuredManga = List.from(_filteredManga)
+        ..sort((a, b) => b.rating.compareTo(a.rating))
+        ..take(6).toList();
+      _recentManga = List.from(_filteredManga)
+        ..sort((a, b) {
+          if (a.chapters.isEmpty) return 1;
+          if (b.chapters.isEmpty) return -1;
+          return b.chapters.first.releaseDate
+              .compareTo(a.chapters.first.releaseDate);
+        })
+        ..take(10).toList();
     });
   }
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Color(0xFF0f172a),
       appBar: AppBar(
         title: Row(
           children: [
@@ -133,14 +180,15 @@ class _HomeScreenState extends State<HomeScreen> {
               'Lory',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).appBarTheme.foregroundColor,
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined, color: Colors.white),
+            icon: Icon(Icons.notifications_outlined,
+                color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () {},
           ),
         ],
@@ -151,12 +199,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Đang tải dữ liệu từ Firebase...',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                 ],
               ),
@@ -166,39 +217,190 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Search bar (Fake - tap to open full search)
                   Padding(
-                    padding: EdgeInsets.all(16),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _filterManga,
-                      style: TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Tìm kiếm truyện tranh...',
-                        hintStyle: TextStyle(color: Colors.white38),
-                        prefixIcon: Icon(Icons.search, color: Color(0xFF06b6d4)),
-                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: _searchController,
-                          builder: (context, value, child) {
-                            return value.text.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(Icons.clear, color: Colors.white54),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _filterManga('');
-                                    },
-                                  )
-                                : SizedBox.shrink();
-                          },
-                        ),
-                        border: OutlineInputBorder(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SearchResultsScreen(
+                              searchQuery: '',
+                              allManga:
+                                  _allManga, // Pass all manga to search screen
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardTheme.color,
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.black
+                                      : Colors.grey)
+                                  .withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        filled: true,
-                        fillColor: Color(0xFF1e293b),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.search,
+                              color: Color(0xFF06b6d4),
+                              size: 24,
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Tìm kiếm truyện tranh...',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color
+                                      ?.withOpacity(0.4),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8,
+                            children: _selectedGenres.map((genre) {
+                              return Chip(
+                                label: Text(genre),
+                                onDeleted: () => _toggleGenre(genre),
+                                backgroundColor: Color(0xFF06b6d4),
+                                labelStyle: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                                deleteIconColor: Colors.white,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        FilterButton(
+                          isActive: _showGenreFilter,
+                          onPressed: () {
+                            setState(() {
+                              _showGenreFilter = !_showGenreFilter;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showGenreFilter)
+                    Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardTheme.color,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chọn Thể Loại',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    Theme.of(context).textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _availableGenres.map((genre) {
+                                final isSelected =
+                                    _selectedGenres.contains(genre);
+                                return FilterChip(
+                                  label: Text(genre),
+                                  selected: isSelected,
+                                  onSelected: (_) => _toggleGenre(genre),
+                                  backgroundColor: Colors.transparent,
+                                  selectedColor:
+                                      Color(0xFF06b6d4).withAlpha(77),
+                                  labelStyle: TextStyle(
+                                    color: isSelected
+                                        ? Color(0xFF06b6d4)
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                  side: BorderSide(
+                                    color: isSelected
+                                        ? Color(0xFF06b6d4)
+                                        : Colors.transparent,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedGenres.clear();
+                                      _filteredManga =
+                                          _applyGenreFilter(_allManga);
+                                      _showGenreFilter = false;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey.shade600,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: Text('Xóa Bộ Lọc'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _showGenreFilter = false;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(0xFF06b6d4),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: Text('Áp Dụng'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (_featuredManga.isNotEmpty) ...[
                     Container(
                       height: 180,
@@ -216,7 +418,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           final baseIndex = (pageIndex * 2) % actualItemCount;
                           final manga1 = _featuredManga[baseIndex];
-                          final manga2 = _featuredManga[(baseIndex + 1) % actualItemCount];
+                          final manga2 =
+                              _featuredManga[(baseIndex + 1) % actualItemCount];
 
                           final mangasInPage = [manga1, manga2];
 
@@ -234,7 +437,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       );
                                     },
                                     child: Container(
-                                      margin: EdgeInsets.only(right: mangasInPage.last == manga ? 0 : 8),
+                                      margin: EdgeInsets.only(
+                                          right: mangasInPage.last == manga
+                                              ? 0
+                                              : 8),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(12),
                                         gradient: LinearGradient(
@@ -249,19 +455,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Stack(
                                         children: [
                                           ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                             child: Image.network(
                                               manga.coverImage,
                                               width: double.infinity,
                                               height: double.infinity,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
                                                 return Container(
-                                                  color: Color(0xFF1e293b),
+                                                  color: Theme.of(context)
+                                                      .cardTheme
+                                                      .color,
                                                   child: Icon(
                                                     Icons.image_outlined,
                                                     size: 48,
-                                                    color: Color(0xFF06b6d4).withOpacity(0.5),
+                                                    color: Color(0xFF06b6d4)
+                                                        .withOpacity(0.5),
                                                   ),
                                                 );
                                               },
@@ -269,7 +480,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           Container(
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               gradient: LinearGradient(
                                                 colors: [
                                                   Colors.transparent,
@@ -285,30 +497,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                             left: 12,
                                             right: 12,
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   manga.title,
                                                   style: TextStyle(
-                                                    color: Colors.white,
+                                                    color: Colors
+                                                        .white, // ✅ Banner text luôn trắng vì nền tối
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                   maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                                 SizedBox(height: 4),
                                                 Row(
                                                   children: [
                                                     Icon(Icons.star,
-                                                        color: Color(0xFFfbbf24),
+                                                        color:
+                                                            Color(0xFFfbbf24),
                                                         size: 12),
                                                     SizedBox(width: 4),
                                                     Text(
-                                                      manga.rating.toString(),
+                                                      manga.rating
+                                                          .toStringAsFixed(1),
                                                       style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 11,
+                                                        color: Colors
+                                                            .white, // ✅ Banner text luôn trắng
+                                                        fontSize: 12,
                                                       ),
                                                     ),
                                                   ],
@@ -339,7 +557,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: _currentBannerPage == index
                                 ? Color(0xFF06b6d4)
-                                : Colors.white24,
+                                : (isDark
+                                    ? Colors.white24
+                                    : Colors.black26), // ✅ Sửa
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -367,22 +587,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        Icon(Icons.library_books, color: Color(0xFF06b6d4), size: 24),
+                        Icon(Icons.library_books,
+                            color: Color(0xFF06b6d4), size: 24),
                         SizedBox(width: 8),
                         Text(
                           'Toàn Bộ Truyện',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
                         Spacer(),
                         Text(
-                          '${_filteredManga.length} truyện',
+                          '${_allManga.length} truyện',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white54,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                         ),
                       ],
@@ -398,13 +620,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Icon(
                                   Icons.library_books_outlined,
                                   size: 64,
-                                  color: Color(0xFF06b6d4).withOpacity(0.5),
+                                  color: isDark
+                                      ? Color(0xFF06b6d4).withOpacity(0.5)
+                                      : Color(0xFF06b6d4)
+                                          .withOpacity(0.3), // ✅ Sửa
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  'Chưa có truyện nào',
+                                  _selectedGenres.isEmpty
+                                      ? 'Chưa có truyện nào'
+                                      : 'Không có truyện nào với thể loại đã chọn',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -412,7 +642,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Text(
                                   'Hãy thêm truyện mới bằng nút + bên dưới',
                                   style: TextStyle(
-                                    color: Colors.white54,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withOpacity(0.7),
                                     fontSize: 14,
                                   ),
                                   textAlign: TextAlign.center,
@@ -425,27 +659,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           shrinkWrap: true,
                           physics: NeverScrollableScrollPhysics(),
                           padding: EdgeInsets.symmetric(horizontal: 16),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             childAspectRatio: 0.65,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                          itemCount: _displayedMangaCount.clamp(0, _filteredManga.length),
+                          itemCount: _allManga.length,
                           itemBuilder: (context, index) {
-                            final manga = _filteredManga[index];
+                            final manga = _allManga[index];
                             return _buildMangaCard(manga);
                           },
                         ),
-                  if (_displayedMangaCount < _filteredManga.length)
-                    Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
-                        ),
-                      ),
-                    ),
                   SizedBox(height: 20),
                 ],
               ),
@@ -456,12 +682,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => upload.UploadMangaScreen(),
+                    builder: (context) => UploadMangaWithChaptersScreen(),
                   ),
                 );
               },
-              backgroundColor: Colors.cyan,
-              child: Icon(Icons.add, color: Colors.white),
+              backgroundColor: Color(0xFF06b6d4),
+              child:
+                  Icon(Icons.add, color: Colors.white), // ✅ FAB icon luôn trắng
             )
           : null,
     );
@@ -487,7 +714,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
             ],
@@ -515,6 +742,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMangaCard(Manga manga) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(
@@ -526,7 +755,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Color(0xFF1e293b),
+          color: Theme.of(context).cardTheme.color,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.3),
@@ -552,17 +781,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Container(
-                          color: Color(0xFF1e293b),
+                          color: Theme.of(context).cardTheme.color,
                           child: Center(
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF06b6d4)),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF06b6d4)),
                             ),
                           ),
                         );
                       },
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: Color(0xFF1e293b),
+                          color: Theme.of(context).cardTheme.color,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -575,7 +805,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text(
                                 'Manga Cover',
                                 style: TextStyle(
-                                  color: Colors.white54,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color,
                                   fontSize: 12,
                                 ),
                               ),
@@ -590,15 +823,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Color(0xFF06b6d4),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          manga.chapters.first.releaseDate,
+                          TimeUtils.formatFromString(
+                              manga.chapters.first.releaseDate),
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors
+                                .white, // ✅ Badge text luôn trắng trên nền cyan
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -618,7 +854,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -633,24 +869,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       SizedBox(width: 4),
                       Text(
-                        manga.rating.toString(),
+                        manga.rating.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.white70,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                       Spacer(),
                       Icon(
                         Icons.visibility,
                         size: 12,
-                        color: Colors.white54,
+                        color:
+                            isDark ? Colors.white54 : Colors.black54, // ✅ Sửa
                       ),
                       SizedBox(width: 4),
                       Text(
                         '${manga.views ~/ 1000}K',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.white70,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                     ],
@@ -660,7 +897,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     spacing: 4,
                     children: manga.genres.take(2).map((genre) {
                       return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Color(0xFFec4899).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -680,6 +918,38 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+class FilterButton extends StatelessWidget {
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  const FilterButton({
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isActive ? Color(0xFF06b6d4).withAlpha(51) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isActive ? Color(0xFF06b6d4) : Colors.grey.shade600,
+            width: 1,
+          ),
+        ),
+        child: Icon(
+          Icons.tune,
+          color: isActive ? Color(0xFF06b6d4) : Colors.grey.shade600,
+          size: 24,
         ),
       ),
     );

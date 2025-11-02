@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart'; // ✅ THÊM
 import '../services/auth_service.dart';
 
-// Màn hình đăng ký tài khoản
 class RegisterScreen extends StatefulWidget {
+  final VoidCallback onToggleTheme;
+  const RegisterScreen({super.key, required this.onToggleTheme});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -25,88 +28,100 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // Xử lý đăng ký
   void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() => _isLoading = true);
 
       final result = await _authService.register(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       if (result['success']) {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: Color(0xFF1e293b),
-            title: Row(
-              children: [
-                Icon(Icons.email, color: Color(0xFF06b6d4), size: 28),
-                SizedBox(width: 12),
-                Text(
-                  'Kiểm tra email',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  result['message'],
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-                SizedBox(height: 16),
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF0f172a),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(0xFF06b6d4).withOpacity(0.3)),
+          builder: (context) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+              title: Row(
+                children: [
+                  const Icon(Icons.email, color: Color(0xFF06b6d4), size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'register.success_dialog_title'.tr(), // ✅
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Color(0xFF06b6d4), size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Sau khi xác thực, bạn có thể đăng nhập',
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to login
-                },
-                child: Text(
-                  'Đã hiểu',
-                  style: TextStyle(color: Color(0xFF06b6d4), fontWeight: FontWeight.w600),
-                ),
+                ],
               ),
-            ],
-          ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    result['message'],
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: const Color(0xFF06b6d4).withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            color: Color(0xFF06b6d4), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'register.success_dialog_info'.tr(), // ✅
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.color
+                                  ?.withOpacity(0.8),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'register.success_dialog_button'.tr(), // ✅
+                    style: const TextStyle(
+                        color: Color(0xFF06b6d4), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message']),
-            backgroundColor: Color(0xFFef4444),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -115,233 +130,319 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Color(0xFF0f172a),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Đăng ký',
-          style: TextStyle(color: Colors.white),
+          'register.title'.tr(), // ✅
+          style: TextStyle(
+            color: Theme.of(context).appBarTheme.foregroundColor,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(
+          color: Theme.of(context).appBarTheme.foregroundColor,
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 20),
-                
+                const SizedBox(height: 20),
                 Text(
-                  'Tạo tài khoản mới',
+                  'register.headline'.tr(), // ✅
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Điền thông tin để tạo tài khoản',
+                  'register.subtitle'.tr(), // ✅
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withOpacity(0.7),
                   ),
                 ),
-                
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-                // Trường nhập Email
+                // Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Email',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'Nhập địa chỉ email',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF06b6d4)),
+                    labelText: 'register.email_label'.tr(), // ✅
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                    hintText: 'register.email_hint'.tr(), // ✅
+                    hintStyle: TextStyle(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color
+                          ?.withOpacity(0.5),
+                    ),
+                    prefixIcon: const Icon(Icons.email_outlined,
+                        color: Color(0xFF06b6d4)),
+                    filled: true,
+                    fillColor: Theme.of(context).cardTheme.color,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF06b6d4), width: 2),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF06b6d4),
+                        width: 2,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Color(0xFF1e293b),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập email';
+                      return 'register.email_required'.tr(); // ✅
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Email không hợp lệ';
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value)) {
+                      return 'register.email_invalid'.tr(); // ✅
                     }
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
 
-                SizedBox(height: 16),
-
-                // Trường nhập Mật khẩu
+                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Mật khẩu',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'Nhập mật khẩu',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF06b6d4)),
+                    labelText: 'register.password_label'.tr(), // ✅
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline,
+                        color: Color(0xFF06b6d4)),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white54,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: isDark ? Colors.white54 : Colors.black54,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
+                    filled: true,
+                    fillColor: Theme.of(context).cardTheme.color,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF06b6d4), width: 2),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF06b6d4),
+                        width: 2,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Color(0xFF1e293b),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
+                      return 'register.password_required'.tr(); // ✅
                     }
                     if (value.length < 6) {
-                      return 'Mật khẩu phải có ít nhất 6 ký tự';
+                      return 'register.password_min_length'.tr(); // ✅
                     }
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
 
-                SizedBox(height: 16),
-
-                // Trường xác nhận Mật khẩu
+                // Confirm Password
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Xác nhận mật khẩu',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'Nhập lại mật khẩu',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF06b6d4)),
+                    labelText: 'register.confirm_password_label'.tr(), // ✅
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline,
+                        color: Color(0xFF06b6d4)),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white54,
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: isDark ? Colors.white54 : Colors.black54,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
+                      onPressed: () => setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword),
                     ),
+                    filled: true,
+                    fillColor: Theme.of(context).cardTheme.color,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF06b6d4), width: 2),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF06b6d4),
+                        width: 2,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Color(0xFF1e293b),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Vui lòng xác nhận mật khẩu';
+                      return 'register.confirm_password_required'.tr(); // ✅
                     }
                     if (value != _passwordController.text) {
-                      return 'Mật khẩu không khớp';
+                      return 'register.confirm_password_mismatch'.tr(); // ✅
                     }
                     return null;
                   },
                 ),
 
-                SizedBox(height: 32),
+                const SizedBox(height: 12),
 
-                // Nút Đăng ký
+                // Password hint
                 Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF06b6d4).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF06b6d4).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Color(0xFF06b6d4),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'register.password_hint'.tr(), // ✅
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.color
+                                ?.withOpacity(0.8),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Register Button
+                SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF06b6d4),
+                      backgroundColor: const Color(0xFF06b6d4),
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          const Color(0xFF06b6d4).withOpacity(0.6),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          )
-                        : Text(
-                            'Đăng ký',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
-                          ),
+                          )
+                        : Text('register.button'.tr(), // ✅
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
+                const SizedBox(height: 24),
 
-                SizedBox(height: 24),
-
-                // Link đăng nhập
+                // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Đã có tài khoản? ',
-                      style: TextStyle(color: Colors.white70),
+                      'register.have_account'.tr(), // ✅
+                      style: TextStyle(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.color
+                            ?.withOpacity(0.7),
+                      ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Đăng nhập',
-                        style: TextStyle(
-                          color: Color(0xFF06b6d4),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        'register.login_now'.tr(), // ✅
+                        style: const TextStyle(
+                            color: Color(0xFF06b6d4),
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
